@@ -1,0 +1,30 @@
+{
+  "name": "listapeliculas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xaquin-Perez-Bermo/ListaPeliculas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Xaquin-Perez-Bermo/ListaPeliculas/issues"
+  },
+  "homepage": "https://github.com/Xaquin-Perez-Bermo/ListaPeliculas#readme",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
