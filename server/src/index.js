@@ -442,7 +442,7 @@ app.get('/api/watchmode', requireAuth, async (req, res) => {
   const apiKey = process.env.WATCHMODE_API_KEY;
 
   if (!apiKey) {
-    return res.status(503).json({ error: 'Watchmode no configurado en el servidor' });
+    return res.status(503).json({ error: 'Watchmode API key no configurada. Obtén una API key gratuita en https://api.watchmode.com/ y agrega WATCHMODE_API_KEY al archivo .env' });
   }
 
   try {

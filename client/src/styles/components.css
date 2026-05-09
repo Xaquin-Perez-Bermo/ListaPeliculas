@@ -1,0 +1,9 @@
+@import './layout/layout.css';
+@import './forms/forms.css';
+@import './list/list-selector.css';
+@import './search/search.css';
+@import './movie/movie-card.css';
+@import './watchmode/watchmode.css';
+@import './modal/modal.css';
+@import './animations/animations.css';
+

@@ -6,6 +6,7 @@ export const translations = {
     logout: 'Salir',
     tabSearch: 'Buscar',
     tabShared: 'Lista conjunta',
+    tabWatched: 'Vistas',
     tabMyLists: 'Mis listas',
     tabActivity: 'Actividad',
     tabDetail: 'Detalle',
@@ -96,6 +97,10 @@ export const translations = {
     detailRatingsHistory: 'Historial de puntuaciones',
     detailNoRatings: 'Todavia no hay puntuaciones',
 
+    watchedMoviesTitle: 'Peliculas vistas',
+    watchedMoviesSubtitle: 'Has visto {{count}} peliculas',
+    noWatchedMovies: 'Aun no has visto ninguna pelicula de la lista conjunta.',
+
     closeRouletteAria: 'Cerrar ruleta',
     rouletteTitle: 'Ruleta de peliculas elegibles',
     rouletteNoEligible: 'No hay peliculas elegibles para la ruleta.',
@@ -145,6 +150,7 @@ export const translations = {
     logout: 'Log out',
     tabSearch: 'Search',
     tabShared: 'Shared list',
+    tabWatched: 'Watched',
     tabMyLists: 'My lists',
     tabActivity: 'Activity',
     tabDetail: 'Detail',
@@ -234,6 +240,10 @@ export const translations = {
     detailMarkUnwatched: 'Mark as unwatched',
     detailRatingsHistory: 'Rating history',
     detailNoRatings: 'No ratings yet',
+
+    watchedMoviesTitle: 'Watched movies',
+    watchedMoviesSubtitle: 'You have watched {{count}} movies',
+    noWatchedMovies: 'You have not watched any movies from the shared list yet.',
 
     closeRouletteAria: 'Close roulette',
     rouletteTitle: 'Eligible movies roulette',

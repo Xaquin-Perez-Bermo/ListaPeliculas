@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useAuth, useMovies, useSearch, useLocalLists, useNavigation } from './hooks'
 import { AuthScreen } from './screens/AuthScreen'
-import { SearchScreen } from './screens/SearchScreen'
-import { SharedListScreen } from './screens/SharedListScreen'
-import { MyListsScreen } from './screens/MyListsScreen'
-import { MovieDetailScreen } from './screens/MovieDetailScreen'
+import { SearchScreen } from './screens/searchScreen/SearchScreen'
+import { SharedListScreen } from './screens/lists/SharedListScreen'
+import { MyListsScreen } from './screens/lists/MyListsScreen'
+import { MovieDetailModal } from './screens/MovieDetailModal'
+import { WatchedMoviesScreen } from './screens/WatchedMoviesScreen'
 import { ActivityScreen } from './screens/ActivityScreen'
 import { getTodayDate, groupGenreVetoesByGenre } from './utils/movieUtils'
 import { useI18n } from './i18n'
@@ -41,7 +42,18 @@ function App() {
 
 
   // UI state for shared list screen
-  const [showVetoConfig, setShowVetoConfig] = useState(false)
+  const [showVetoConfig, setShowVetoConfig] = useState(() => {
+    // Cargar configuración de veto desde localStorage
+    return localStorage.getItem('showVetoConfig') === 'true'
+  })
+
+  // Modal state for movie details
+  const [showDetailModal, setShowDetailModal] = useState(false)
+
+  // Guardar showVetoConfig en localStorage cuando cambie
+  useEffect(() => {
+    localStorage.setItem('showVetoConfig', showVetoConfig.toString())
+  }, [showVetoConfig])
 
 
   const sharedMovieIds = useMemo(
@@ -159,6 +171,7 @@ function App() {
   const navItems = [
     { id: 'buscar', label: t('tabSearch') },
     { id: 'lista', label: t('tabShared') },
+    { id: 'vistas', label: t('tabWatched') },
     { id: 'mis-listas', label: t('tabMyLists') },
     { id: 'actividad', label: t('tabActivity') },
   ]
@@ -202,14 +215,6 @@ function App() {
                 {item.label}
               </button>
             ))}
-            {movies.selectedMovie ? (
-              <button
-                className={screen === 'detalle' ? 'tab active' : 'tab'}
-                onClick={() => setScreen('detalle')}
-              >
-                {t('tabDetail')}
-              </button>
-            ) : null}
           </nav>
 
           {feedback ? <p className="flash">{feedback}</p> : null}
@@ -230,6 +235,7 @@ function App() {
                 selectedSearchMovie={search.selectedSearchMovie}
                 setSelectedSearchMovie={search.setSelectedSearchMovie}
                 watchmodeData={search.watchmodeData}
+                watchmodeDataById={search.watchmodeDataById}
                 watchmodeLoading={search.watchmodeLoading}
                 watchmodeError={search.watchmodeError}
                 fetchWatchmodeData={search.fetchWatchmodeData}
@@ -260,7 +266,7 @@ function App() {
                 t={t}
                 onOpenDetail={(movieId) => {
                   movies.setSelectedMovieId(movieId)
-                  setScreen('detalle')
+                  setShowDetailModal(true)
                 }}
               />
             ) : null}
@@ -274,22 +280,36 @@ function App() {
               />
             ) : null}
 
-            {screen === 'detalle' ? (
-              <MovieDetailScreen
-                selectedMovie={movies.selectedMovie}
-                detailRatings={movies.detailRatings}
-                ratingState={getRatingState(movies.selectedMovie || {})}
-                onRatingChange={(updates) =>
-                  handleRatingChange(movies.selectedMovieId, updates)
-                }
-                onSaveRating={handleSaveRating}
-                onClearWatched={handleClearWatched}
+            {screen === 'vistas' ? (
+              <WatchedMoviesScreen
+                movies={movies.movies}
+                currentUsername={movies.user?.username || ''}
                 t={t}
+                onOpenDetail={(movieId) => {
+                  movies.setSelectedMovieId(movieId)
+                  setShowDetailModal(true)
+                }}
+                getGenreLabel={(genre) => t(`genre${genre}`) || genre}
               />
             ) : null}
 
             {screen === 'actividad' ? <ActivityScreen logs={movies.logs} t={t} /> : null}
           </main>
+
+          {showDetailModal ? (
+            <MovieDetailModal
+              selectedMovie={movies.selectedMovie}
+              detailRatings={movies.detailRatings}
+              ratingState={getRatingState(movies.selectedMovie || {})}
+              onRatingChange={(updates) =>
+                handleRatingChange(movies.selectedMovieId, updates)
+              }
+              onSaveRating={handleSaveRating}
+              onClearWatched={handleClearWatched}
+              onClose={() => setShowDetailModal(false)}
+              t={t}
+            />
+          ) : null}
 
         </>
       ) : (

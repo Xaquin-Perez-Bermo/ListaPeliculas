@@ -10,7 +10,10 @@ export function useMovies(token) {
   const [movies, setMovies] = useState([])
   const [genreVetoes, setGenreVetoes] = useState([])
   const [logs, setLogs] = useState([])
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState(() => {
+    // Cargar filtro de estado desde localStorage
+    return localStorage.getItem('statusFilter') || 'all'
+  })
   const [genreFilter, setGenreFilter] = useState('')
   const [selectedMovieId, setSelectedMovieId] = useState(null)
   const [detailRatings, setDetailRatings] = useState([])
@@ -45,6 +48,11 @@ export function useMovies(token) {
   useEffect(() => {
     loadData()
   }, [token, statusFilter, genreFilter])
+
+  // Guardar statusFilter en localStorage cuando cambie
+  useEffect(() => {
+    localStorage.setItem('statusFilter', statusFilter)
+  }, [statusFilter])
 
   // Load ratings when selected movie changes
   useEffect(() => {

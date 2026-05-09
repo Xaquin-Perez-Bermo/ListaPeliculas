@@ -2,8 +2,9 @@
  * SearchScreen - Pantalla de búsqueda
  */
 /* eslint-disable react/prop-types, sonarjs/cognitive-complexity */
-import WatchmodePanel from './WatchmodePanel'
-import ListSelector from './ListSelector'
+import SearchMovieCard from '../../components/search/SearchMovieCard'
+import WatchmodePanel from '../WatchmodePanel'
+import ListSelector from '../lists/ListSelector'
 import { useState } from 'react'
 
 // eslint-disable-next-line react/prop-types
@@ -16,6 +17,7 @@ function ExternalSearchSection({
   selectedSearchMovie,
   setSelectedSearchMovie,
   watchmodeData,
+  watchmodeDataById = {},
   watchmodeLoading,
   watchmodeError,
   fetchWatchmodeData,
@@ -31,6 +33,7 @@ function ExternalSearchSection({
   t,
 }) {
   const [likeTargetMovie, setLikeTargetMovie] = useState(null)
+  const [showWatchmodePanel, setShowWatchmodePanel] = useState(false)
   return (
     <>
       <form onSubmit={handleDiscover} className="inline-form">
@@ -57,41 +60,28 @@ function ExternalSearchSection({
                   const hasSavedLocal = savedInLists.length > 0
                   const hasSavedAnywhere = hasSavedLocal || isInSharedList(movie.externalId)
                   return (
-                <li
-                  key={movie.externalId}
-                  className={`movie-card search-card${selectedSearchMovie?.externalId === movie.externalId ? ' card-selected' : ''}`}
-                >
-                  {movie.posterUrl ? (
-                    <img
-                      src={movie.posterUrl}
-                      alt={movie.title}
-                      className="search-poster"
-                    />
-                  ) : null}
-                  <div className="movie-main">
-                    <strong>{movie.title}</strong>
-                    <p className="muted">{movie.year || t('naLabel')}</p>
-                  </div>
-                  <div className="movie-actions">
-                    <button onClick={() => fetchWatchmodeData(movie)}>{t('infoButton')}</button>
-                    <button
-                      className={`like-button ${hasSavedAnywhere ? 'saved' : ''}`}
-                      onClick={() => setLikeTargetMovie(movie)}
-                      type="button"
-                    >
-                      {hasSavedAnywhere ? t('savedButton') : t('likeButton')}
-                    </button>
-                  </div>
-                </li>
+                <SearchMovieCard
+                  key={movie.externalId || movie.id || movie.title}
+                  movie={movie}
+                  setLikeTargetMovie={setLikeTargetMovie}
+                  t={t}
+                  fetchWatchmodeData={(movie) => {
+                    fetchWatchmodeData(movie)
+                    setShowWatchmodePanel(true)
+                  }}
+                  selectedSearchMovie={selectedSearchMovie}
+                  watchmodeData={watchmodeDataById?.[movie.externalId]}
+                  hasSavedAnywhere={hasSavedAnywhere}
+                />
                   )
                 })}
             </ul>
 
-            {selectedSearchMovie ? (
+            {showWatchmodePanel && selectedSearchMovie ? (
               <>
                 <button
                   className="watchmode-backdrop"
-                  onClick={() => setSelectedSearchMovie(null)}
+                  onClick={() => setShowWatchmodePanel(false)}
                   type="button"
                   aria-label={t('closePanelAria')}
                   title={t('closeByClickTitle')}
@@ -101,7 +91,7 @@ function ExternalSearchSection({
                   watchmodeData={watchmodeData}
                   watchmodeLoading={watchmodeLoading}
                   watchmodeError={watchmodeError}
-                  onClose={() => setSelectedSearchMovie(null)}
+                  onClose={() => setShowWatchmodePanel(false)}
                   localLists={localLists}
                   onToggleInLocalList={onToggleInLocalList}
                   getListsForMovie={getListsForMovie}
@@ -253,6 +243,7 @@ export function SearchScreen({
   selectedSearchMovie,
   setSelectedSearchMovie,
   watchmodeData,
+  watchmodeDataById,
   watchmodeLoading,
   watchmodeError,
   fetchWatchmodeData,
@@ -296,6 +287,7 @@ export function SearchScreen({
           selectedSearchMovie={selectedSearchMovie}
           setSelectedSearchMovie={setSelectedSearchMovie}
           watchmodeData={watchmodeData}
+          watchmodeDataById={watchmodeDataById}
           watchmodeLoading={watchmodeLoading}
           watchmodeError={watchmodeError}
           fetchWatchmodeData={fetchWatchmodeData}

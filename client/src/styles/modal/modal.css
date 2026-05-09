@@ -1,0 +1,100 @@
+.modal-backdrop,
+.roulette-backdrop,
+.watchmode-backdrop,
+.like-selector-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(2px);
+}
+
+.modal,
+.roulette-modal,
+.like-selector-panel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.like-selector-panel {
+  width: min(480px, 90vw);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.like-selector-panel h3 {
+  margin: 0 0 20px;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.roulette-modal {
+  width: min(560px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  position: fixed;
+  z-index: 1201;
+}
+
+.roulette-pointer {
+  text-align: center;
+  font-size: 30px;
+  line-height: 1;
+  margin: 4px 0 -8px;
+  color: var(--accent);
+}
+
+.roulette-canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+
+.modal.large {
+  width: min(800px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--ink);
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.close-button:hover {
+  background: var(--hover);
+  color: var(--ink);
+}

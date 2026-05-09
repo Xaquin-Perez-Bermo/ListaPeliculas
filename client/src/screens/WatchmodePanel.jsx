@@ -3,7 +3,7 @@
  */
 /* eslint-disable react/prop-types, sonarjs/cognitive-complexity */
 import { useState } from 'react'
-import ListSelector from './ListSelector'
+import ListSelector from './lists/ListSelector'
 
 function WatchmodePanel({
   selectedSearchMovie,
