@@ -2,8 +2,9 @@
  * SharedListScreen - Pantalla de lista conjunta
  */
 /* eslint-disable react/prop-types */
-import { useState } from 'react'
-import { RandomRouletteModal } from './RandomRouletteModal'
+import { useState, useEffect } from 'react'
+import { RandomRouletteModal } from '../RandomRouletteModal'
+import MovieCard from '../../components/movies/MovieCard'
 
 // eslint-disable-next-line react/prop-types
 export function SharedListScreen({
@@ -20,7 +21,16 @@ export function SharedListScreen({
   onOpenDetail,
 }) {
   const [showRoulette, setShowRoulette] = useState(false)
-  const [selectedGenres, setSelectedGenres] = useState([])
+  const [selectedGenres, setSelectedGenres] = useState(() => {
+    // Cargar géneros seleccionados desde localStorage
+    const saved = localStorage.getItem('selectedGenres')
+    return saved ? JSON.parse(saved) : []
+  })
+
+  // Guardar selectedGenres en localStorage cuando cambie
+  useEffect(() => {
+    localStorage.setItem('selectedGenres', JSON.stringify(selectedGenres))
+  }, [selectedGenres])
 
   const genreKeyMap = {
     Action: 'genreAction',
@@ -157,39 +167,15 @@ export function SharedListScreen({
 
       <ul className="result-list">
         {filteredMovies.map((movie) => (
-          <li key={movie.id} className="movie-card">
-            <div className="movie-main">
-              <strong>
-                {movie.title} {movie.year ? `(${movie.year})` : `(${t('naLabel')})`}
-              </strong>
-              <div className="chip-row">
-                {movie.genres.map((genre) => (
-                  <span key={`${movie.id}-${genre}`} className="chip">
-                    {getGenreLabel(genre)}
-                  </span>
-                ))}
-              </div>
-              <p className="muted">
-                {t('addedByLabel')} {movie.createdBy} | {t('avgRatingLabel')} {movie.avgRating || t('naLabel')}
-              </p>
-              {movie.isVetoed ? (
-                <p className="error small">
-                  {t('vetoedStatus')} {movie.vetoedBy.length ? `${t('byLabel')} ${movie.vetoedBy.join(', ')}` : ''}
-                </p>
-              ) : (
-                <p className="success small">{t('eligibleStatus')}</p>
-              )}
-            </div>
-
-            <div className="movie-actions">
-              <button onClick={() => onOpenDetail(movie.id)}>{t('viewDetailButton')}</button>
-              <button onClick={() => onToggleMovieVeto(movie)}>
-                {(movie.vetoedBy || []).includes(currentUsername)
-                  ? t('removeVetoButton')
-                  : t('addVetoButton')}
-              </button>
-            </div>
-          </li>
+          <MovieCard
+            key={movie.id}
+            movie={movie}
+            currentUsername={currentUsername}
+            t={t}
+            onOpenDetail={onOpenDetail}
+            onToggleMovieVeto={onToggleMovieVeto}
+            getGenreLabel={getGenreLabel}
+          />
         ))}
       </ul>
     </section>

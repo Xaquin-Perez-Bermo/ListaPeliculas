@@ -2,11 +2,19 @@
  * useNavigation Hook - Maneja la navegación entre pantallas
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export function useNavigation() {
-  const [screen, setScreen] = useState('buscar')
+  const [screen, setScreen] = useState(() => {
+    // Cargar pantalla desde localStorage al inicializar
+    return localStorage.getItem('currentScreen') || 'buscar'
+  })
   const [feedback, setFeedback] = useState('')
+
+  // Guardar pantalla en localStorage cuando cambie
+  useEffect(() => {
+    localStorage.setItem('currentScreen', screen)
+  }, [screen])
 
   const showFeedback = (message) => {
     setFeedback(message)

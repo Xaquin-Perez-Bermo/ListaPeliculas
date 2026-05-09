@@ -1,0 +1,180 @@
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.list-header h3 {
+  margin: 0;
+  flex: 1;
+}
+
+.delete-list-btn,
+.list-delete-btn,
+.confirm-btn,
+.cancel-btn,
+.close-btn,
+.accept-btn {
+  cursor: pointer;
+}
+
+.delete-list-btn {
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.delete-list-btn:hover {
+  background: rgba(255, 59, 48, 0.1);
+  border-color: rgba(255, 59, 48, 0.6);
+  box-shadow: 0 2px 6px rgba(255, 59, 48, 0.15);
+}
+
+.create-list-section {
+  margin-top: 32px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f0f9f8 0%, #e8f5f3 100%);
+  border: 2px dashed var(--accent);
+  border-radius: 12px;
+}
+
+.create-list-section h3 {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.form-row,
+.new-list-form {
+  display: flex;
+  gap: 8px;
+}
+
+.form-row input,
+.new-list-form input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.form-row input:focus,
+.new-list-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(20, 108, 103, 0.1);
+}
+
+.form-row button {
+  padding: 10px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.form-row button:hover {
+  background: #0d6e68;
+  box-shadow: 0 2px 8px rgba(20, 108, 103, 0.25);
+}
+
+.form-row button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.list-selector {
+  margin-bottom: 16px;
+}
+
+.list-selector h4 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lists-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.list-option-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.list-option {
+  flex: 1;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f0f9f8 0%, #e8f5f3 100%);
+  border: 1px solid #c8e6e1;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.list-option:hover {
+  background: linear-gradient(135deg, #e8f5f3 0%, #d0efea 100%);
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(20, 108, 103, 0.15);
+  transform: translateY(-1px);
+}
+
+.list-option.saved {
+  background: linear-gradient(135deg, #e5f6ec 0%, #d8f0e4 100%);
+  border-color: #5dbb8d;
+}
+
+.list-option:active {
+  transform: translateY(0);
+}
+
+.list-delete-btn {
+  padding: 8px 12px;
+  background: #eef9f6;
+  border: 1px solid #8ebdb5;
+  border-radius: 8px;
+  color: #1f6460;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.list-delete-btn:hover {
+  background: #def3ee;
+  border-color: #6ea79e;
+  box-shadow: 0 2px 8px rgba(20, 108, 103, 0.12);
+}
+
+.create-list-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.create-list-btn:hover {
+  background: rgba(20, 108, 103, 0.05);
+  border-color: var(--accent);
+}

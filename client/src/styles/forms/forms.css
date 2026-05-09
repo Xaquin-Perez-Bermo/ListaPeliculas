@@ -1,0 +1,111 @@
+input,
+select,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  width: 100%;
+  border: 1px solid #ccbda8;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}
+
+button {
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(0.95);
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--accent);
+}
+
+.like-button {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+.like-button.saved {
+  background: #2f8d67;
+  border-color: #2f8d67;
+}
+
+.inline-form {
+  display: flex;
+  gap: 8px;
+}
+
+.inline-form input,
+.filters input,
+.filters select,
+.search-input-full {
+  width: auto;
+}
+
+.filters {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.search-mode-bar {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.search-input-full {
+  width: 100%;
+  border: 1px solid #ccbda8;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+  margin-bottom: 4px;
+}
+
+button.confirm-btn,
+button.cancel-btn,
+button.close-btn,
+button.accept-btn {
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+button.confirm-btn,
+button.accept-btn {
+  background: var(--accent);
+  color: white;
+}
+
+button.confirm-btn:hover,
+button.accept-btn:hover {
+  background: #0d6e68;
+  box-shadow: 0 2px 8px rgba(20, 108, 103, 0.25);
+}
+
+button.cancel-btn,
+button.close-btn {
+  background: #f5f5f5;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+button.cancel-btn:hover,
+button.close-btn:hover {
+  background: #efefef;
+}

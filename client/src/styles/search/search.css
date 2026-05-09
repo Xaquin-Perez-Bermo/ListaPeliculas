@@ -1,0 +1,99 @@
+.search-box {
+  flex: 1;
+}
+
+.search-input,
+.search-input-full {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+}
+
+.movie-list-heading {
+  margin-bottom: 12px;
+}
+
+.search-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 14px;
+  align-items: start;
+  animation: slideInUp 0.3s ease-out;
+  position: relative;
+}
+
+.search-results-col {
+  margin-top: 0;
+}
+
+.search-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.search-card:hover {
+  background: rgba(20, 108, 103, 0.05);
+  transform: translateX(2px);
+}
+
+.search-poster {
+  width: 96px;
+  height: 144px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.search-card:hover .search-poster {
+  transform: scale(1.03);
+}
+
+.search-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+}
+
+.search-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search-card-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.search-card-footer button {
+  min-width: 140px;
+}
+
+.search-genre-row {
+  gap: 8px;
+}
+
+.search-plot {
+  margin: 0;
+  line-height: 1.5;
+  max-height: 4.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(20, 108, 103, 0.25);
+  background: rgba(20, 108, 103, 0.08);
+  animation: pulse 0.6s ease-out;
+}
