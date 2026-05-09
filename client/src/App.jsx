@@ -1,519 +1,313 @@
-import { useEffect, useMemo, useState } from 'react'
-import MovieList from './components/MovieList'
-import MovieListHeading from './components/MovieListHeading'
-import SearchBox from './components/SearchBox'
-import AddFavourites from './components/AddFavourites'
-import RemoveFavourites from './components/RemoveFavourites'
+import { useMemo, useState } from 'react'
+import { useAuth, useMovies, useSearch, useLocalLists, useNavigation } from './hooks'
+import { AuthScreen } from './screens/AuthScreen'
+import { SearchScreen } from './screens/SearchScreen'
+import { SharedListScreen } from './screens/SharedListScreen'
+import { MyListsScreen } from './screens/MyListsScreen'
+import { MovieDetailScreen } from './screens/MovieDetailScreen'
+import { ActivityScreen } from './screens/ActivityScreen'
+import { getTodayDate, groupGenreVetoesByGenre } from './utils/movieUtils'
+import { useI18n } from './i18n'
+import './App.css'
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token') || '')
-  const [user, setUser] = useState(null)
-  const [authMode, setAuthMode] = useState('login')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [authError, setAuthError] = useState('')
+  const { language, setLanguage, t } = useI18n()
 
-  const [searchValue, setSearchValue] = useState('')
-  const [omdbMovies, setOmdbMovies] = useState([])
-  const [favourites, setFavourites] = useState([])
-  const [omdbError, setOmdbError] = useState('')
+  // Auth state
+  const auth = useAuth()
 
-  const [movies, setMovies] = useState([])
-  const [discoverQuery, setDiscoverQuery] = useState('')
-  const [discoverResults, setDiscoverResults] = useState([])
-  const [discoverError, setDiscoverError] = useState('')
+  // Movies and data state
+  const movies = useMovies(auth.token)
 
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [genreFilter, setGenreFilter] = useState('')
-  const [genreVetoes, setGenreVetoes] = useState([])
-  const [newGenreVeto, setNewGenreVeto] = useState('')
+  // Search state
+  const search = useSearch(movies.movies, movies.logs)
 
-  const [randomPick, setRandomPick] = useState(null)
-  const [randomError, setRandomError] = useState('')
-  const [logs, setLogs] = useState([])
+  // Local lists state
+  const {
+    localLists,
+    createList,
+    deleteList,
+    toggleMovieInLocalList,
+    getListsForMovie,
+    isMovieSaved,
+  } = useLocalLists()
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Navigation state
+  const { screen, setScreen, feedback, showFeedback } = useNavigation()
+
+  // Rating inputs for the detail screen
   const [ratingInputs, setRatingInputs] = useState({})
 
-  async function api(path, options = {}) {
-    const headers = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    }
 
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-    }
+  // UI state for shared list screen
+  const [showVetoConfig, setShowVetoConfig] = useState(false)
 
-    const response = await fetch(path, {
-      ...options,
-      headers,
-    })
 
-    let body = {}
+  const sharedMovieIds = useMemo(
+    () => new Set((movies.movies || []).map((movie) => movie.externalId)),
+    [movies.movies],
+  )
 
-    try {
-      body = await response.json()
-    } catch {
-      body = {}
-    }
-
-    if (!response.ok) {
-      throw new Error(body.error || 'Error inesperado en la API')
-    }
-
-    return body
-  }
-
-  async function loadData() {
-    if (!token) return
-
-    const [me, moviesData, genreData, logsData] = await Promise.all([
-      api('/api/auth/me'),
-      api(`/api/movies?status=${statusFilter}&genre=${encodeURIComponent(genreFilter)}`),
-      api('/api/veto-genres'),
-      api('/api/logs'),
-    ])
-
-    setUser(me)
-    setMovies(moviesData)
-    setGenreVetoes(genreData)
-    setLogs(logsData)
-  }
-
-  useEffect(() => {
-    loadData().catch((error) => {
-      setAuthError(error.message)
-      setToken('')
-      localStorage.removeItem('token')
-    })
-  }, [token, statusFilter, genreFilter])
-
-  useEffect(() => {
-    const movieFavourites = JSON.parse(localStorage.getItem('react-movie-app-favourites'))
-    if (movieFavourites) {
-      setFavourites(movieFavourites)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!searchValue.trim()) {
-      setOmdbMovies([])
-      setOmdbError('')
+  // Handlers for adding movies to lists
+  const handleAddToSharedList = async (movie) => {
+    if (sharedMovieIds.has(movie.externalId)) {
+      showFeedback(t('alreadySharedFeedback', { title: movie.title }))
       return
     }
 
-    const controller = new AbortController()
-    const searchUrl = `https://www.omdbapi.com/?s=${encodeURIComponent(searchValue)}&apikey=263d22d8`
-
-    fetch(searchUrl, { signal: controller.signal })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.Search) {
-          setOmdbMovies(data.Search)
-          setOmdbError('')
-        } else {
-          setOmdbMovies([])
-          setOmdbError(data.Error || 'No se encontraron peliculas')
-        }
-      })
-      .catch((error) => {
-        if (error.name !== 'AbortError') {
-          setOmdbMovies([])
-          setOmdbError('Error al buscar peliculas')
-        }
-      })
-
-    return () => controller.abort()
-  }, [searchValue])
-
-  function saveToLocalStorage(items) {
-    localStorage.setItem('react-movie-app-favourites', JSON.stringify(items))
+    try {
+      const success = await movies.addMovie(movie)
+      if (success) {
+        showFeedback(t('addedToSharedFeedback', { title: movie.title }))
+      }
+    } catch (error) {
+      showFeedback(error.message)
+    }
   }
 
-  function addFavouriteMovie(movie) {
-    if (favourites.some((fav) => fav.imdbID === movie.imdbID)) return
+  const handleToggleInLocalList = (listName, movie) => {
+    const listNames = getListsForMovie(movie.externalId)
+    const isCurrentlySaved = listNames.includes(listName)
 
-    const newFavouriteList = [...favourites, movie]
-    setFavourites(newFavouriteList)
-    saveToLocalStorage(newFavouriteList)
-  }
+    toggleMovieInLocalList(listName, movie)
 
-  function removeFavouriteMovie(movie) {
-    const newFavouriteList = favourites.filter(
-      (favourite) => favourite.imdbID !== movie.imdbID,
+    showFeedback(
+      isCurrentlySaved
+        ? t('removedFromListFeedback', { title: movie.title, listName })
+        : t('savedInListFeedback', { title: movie.title, listName }),
     )
-    setFavourites(newFavouriteList)
-    saveToLocalStorage(newFavouriteList)
   }
 
-  async function handleAuthSubmit(event) {
-    event.preventDefault()
-    setAuthError('')
+  // Handlers for genre veto
+  const handleToggleGenreVeto = async (genre, hasMyVeto) => {
+    const success = hasMyVeto
+      ? await movies.removeGenreVeto(genre)
+      : await movies.addGenreVeto(genre)
 
-    try {
-      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register'
-      const data = await api(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({ username, password }),
+    if (success) {
+      showFeedback(
+        hasMyVeto
+          ? t('vetoRemovedFeedback', { genre })
+          : t('vetoAddedFeedback', { genre }),
+      )
+    }
+  }
+
+  const handleToggleMovieVeto = async (movie) => {
+    const hasMyVeto = (movie.vetoedBy || []).includes(movies.user?.username)
+    if (hasMyVeto) {
+      await movies.unvetoMovie(movie.id)
+      return
+    }
+
+    await movies.vetoMovie(movie.id)
+  }
+
+  // Handlers for ratings
+  const getRatingState = (movie) => {
+    return (
+      ratingInputs[movie.id] || {
+        rating: movie.myRating || 3,
+        watchedOn: movie.myWatchedOn || getTodayDate(),
+      }
+    )
+  }
+
+  const handleRatingChange = (movieId, updates) => {
+    const current = getRatingState(movies.selectedMovie)
+    setRatingInputs((prev) => ({
+      ...prev,
+      [movieId]: {
+        ...current,
+        ...updates,
+      },
+    }))
+  }
+
+  const handleSaveRating = async (movieId) => {
+    const current = ratingInputs[movieId] || { rating: 3, watchedOn: getTodayDate() }
+    const success = await movies.saveRating(movieId, current.rating, current.watchedOn)
+    if (success) {
+      showFeedback(t('ratingSavedFeedback'))
+      setRatingInputs((prev) => {
+        const next = { ...prev }
+        delete next[movieId]
+        return next
       })
-
-      setToken(data.token)
-      localStorage.setItem('token', data.token)
-      setUsername('')
-      setPassword('')
-    } catch (error) {
-      setAuthError(error.message)
     }
   }
 
-  async function handleDiscover(event) {
-    event.preventDefault()
-    setDiscoverError('')
-
-    try {
-      const data = await api(`/api/discover?q=${encodeURIComponent(discoverQuery)}`)
-      setDiscoverResults(data)
-    } catch (error) {
-      setDiscoverError(error.message)
-      setDiscoverResults([])
+  const handleClearWatched = async (movieId) => {
+    const success = await movies.clearRating(movieId)
+    if (success) {
+      showFeedback(t('unwatchedFeedback'))
+      setRatingInputs((prev) => {
+        const next = { ...prev }
+        delete next[movieId]
+        return next
+      })
     }
   }
 
-  async function addMovie(movie) {
-    await api('/api/movies', {
-      method: 'POST',
-      body: JSON.stringify(movie),
-    })
-    await loadData()
-  }
+  // Memoized values
+  const groupedGenreVetoes = useMemo(
+    () => groupGenreVetoesByGenre(movies.genreVetoes),
+    [movies.genreVetoes],
+  )
 
-  async function vetoMovie(movieId) {
-    await api(`/api/movies/${movieId}/veto`, { method: 'POST' })
-    await loadData()
-  }
-
-  async function unvetoMovie(movieId) {
-    await api(`/api/movies/${movieId}/veto`, { method: 'DELETE' })
-    await loadData()
-  }
-
-  async function addGenreVeto(event) {
-    event.preventDefault()
-    if (!newGenreVeto.trim()) return
-
-    await api('/api/veto-genres', {
-      method: 'POST',
-      body: JSON.stringify({ genre: newGenreVeto.trim() }),
-    })
-
-    setNewGenreVeto('')
-    await loadData()
-  }
-
-  async function removeGenreVeto(genre) {
-    await api(`/api/veto-genres/${encodeURIComponent(genre)}`, { method: 'DELETE' })
-    await loadData()
-  }
-
-  async function saveRating(movieId) {
-    const current = ratingInputs[movieId] || { rating: 3, watchedOn: today }
-
-    await api(`/api/movies/${movieId}/rating`, {
-      method: 'POST',
-      body: JSON.stringify(current),
-    })
-
-    await loadData()
-  }
-
-  async function pickRandomMovie() {
-    setRandomError('')
-
-    try {
-      const data = await api('/api/random-pick')
-      setRandomPick(data)
-    } catch (error) {
-      setRandomPick(null)
-      setRandomError(error.message)
-    }
-  }
-
-  function logout() {
-    localStorage.removeItem('token')
-    setToken('')
-    setUser(null)
-    setMovies([])
-    setGenreVetoes([])
-    setLogs([])
-  }
-
-  const groupedGenreVetoes = useMemo(() => {
-    return genreVetoes.reduce((acc, item) => {
-      if (!acc[item.genre]) acc[item.genre] = []
-      acc[item.genre].push(item.username)
-      return acc
-    }, {})
-  }, [genreVetoes])
+  const navItems = [
+    { id: 'buscar', label: t('tabSearch') },
+    { id: 'lista', label: t('tabShared') },
+    { id: 'mis-listas', label: t('tabMyLists') },
+    { id: 'actividad', label: t('tabActivity') },
+  ]
 
   return (
     <div className="page">
       <header className="topbar">
-        <h1>CineJunta</h1>
-        {user ? (
+        <div>
+          <h1>{t('appTitle')}</h1>
+          <p className="muted">{t('appSubtitle')}</p>
+        </div>
+
+        {movies.user ? (
           <div className="topbar-user">
-            <span>Hola, {user.username}</span>
-            <button onClick={logout}>Salir</button>
+            <label htmlFor="lang-switch" className="muted small">
+              {t('language')}
+            </label>
+            <select
+              id="lang-switch"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value)}
+            >
+              <option value="es">ES</option>
+              <option value="en">EN</option>
+            </select>
+            <span>{t('helloUser', { username: movies.user.username })}</span>
+            <button onClick={auth.logout}>{t('logout')}</button>
           </div>
         ) : null}
       </header>
 
-      {token ? (
-        <main className="grid">
-          <section className="panel">
-            <div className="panel-head">
-              <MovieListHeading heading="Buscador OMDB" />
-              <SearchBox
-                value={searchValue}
-                setSearchValue={setSearchValue}
-                placeholder="Buscar peliculas en OMDB..."
-              />
-            </div>
-
-            {omdbError ? <p className="error">{omdbError}</p> : null}
-
-            <div className="movie-row">
-              <MovieList
-                movies={omdbMovies}
-                handleFavouritesClick={addFavouriteMovie}
-                favouriteComponent={AddFavourites}
-              />
-            </div>
-
-            <MovieListHeading heading="Favoritos locales" />
-            <div className="movie-row">
-              <MovieList
-                movies={favourites}
-                handleFavouritesClick={removeFavouriteMovie}
-                favouriteComponent={RemoveFavourites}
-              />
-            </div>
-          </section>
-
-          <section className="panel">
-            <h2>Buscar peliculas</h2>
-            <form onSubmit={handleDiscover} className="inline-form">
-              <input
-                type="text"
-                placeholder="Ej: Inception"
-                value={discoverQuery}
-                onChange={(e) => setDiscoverQuery(e.target.value)}
-                required
-              />
-              <button type="submit">Buscar</button>
-            </form>
-
-            {discoverError ? <p className="error">{discoverError}</p> : null}
-
-            <ul className="result-list">
-              {discoverResults.map((movie) => (
-                <li key={movie.externalId} className="movie-item compact">
-                  <div>
-                    <strong>{movie.title}</strong>
-                    <p>
-                      {movie.year || 'N/A'} | {movie.genres.join(', ')}
-                    </p>
-                  </div>
-                  <button onClick={() => addMovie(movie)}>Anadir a lista</button>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="panel">
-            <h2>Vetos por genero</h2>
-            <form onSubmit={addGenreVeto} className="inline-form">
-              <input
-                type="text"
-                placeholder="Ej: Horror"
-                value={newGenreVeto}
-                onChange={(e) => setNewGenreVeto(e.target.value)}
-              />
-              <button type="submit">Vetar genero</button>
-            </form>
-
-            <ul className="pill-list">
-              {Object.entries(groupedGenreVetoes).map(([genre, users]) => (
-                <li key={genre}>
-                  <span>
-                    {genre} ({users.join(', ')})
-                  </span>
-                  <button className="ghost" onClick={() => removeGenreVeto(genre)}>
-                    quitar mi veto
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="panel full-width">
-            <div className="panel-head">
-              <h2>Lista conjunta</h2>
-              <div className="filters">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  <option value="active">Solo elegibles</option>
-                  <option value="vetoed">Solo vetadas</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Filtrar por genero"
-                  value={genreFilter}
-                  onChange={(e) => setGenreFilter(e.target.value)}
-                />
-                <button onClick={pickRandomMovie}>Seleccion aleatoria</button>
-              </div>
-            </div>
-
-            {randomPick ? (
-              <p className="success">Sugerencia: {randomPick.title} ({randomPick.year || 'N/A'})</p>
+      {auth.isAuthenticated ? (
+        <>
+          <nav className="tabbar">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                className={screen === item.id ? 'tab active' : 'tab'}
+                onClick={() => setScreen(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+            {movies.selectedMovie ? (
+              <button
+                className={screen === 'detalle' ? 'tab active' : 'tab'}
+                onClick={() => setScreen('detalle')}
+              >
+                {t('tabDetail')}
+              </button>
             ) : null}
-            {randomError ? <p className="error">{randomError}</p> : null}
+          </nav>
 
-            <ul className="result-list">
-              {movies.map((movie) => {
-                const ratingState = ratingInputs[movie.id] || {
-                  rating: movie.myRating || 3,
-                  watchedOn: movie.myWatchedOn || today,
+          {feedback ? <p className="flash">{feedback}</p> : null}
+
+          <main className="content">
+            {screen === 'buscar' ? (
+              <SearchScreen
+                searchMode={search.searchMode}
+                setSearchMode={search.setSearchMode}
+                discoverQuery={search.discoverQuery}
+                setDiscoverQuery={search.setDiscoverQuery}
+                discoverResults={search.discoverResults}
+                discoverError={search.discoverError}
+                handleDiscover={search.handleDiscover}
+                internalQuery={search.internalQuery}
+                setInternalQuery={search.setInternalQuery}
+                internalResults={search.internalResults}
+                selectedSearchMovie={search.selectedSearchMovie}
+                setSelectedSearchMovie={search.setSelectedSearchMovie}
+                watchmodeData={search.watchmodeData}
+                watchmodeLoading={search.watchmodeLoading}
+                watchmodeError={search.watchmodeError}
+                fetchWatchmodeData={search.fetchWatchmodeData}
+                localLists={localLists}
+                onToggleInLocalList={handleToggleInLocalList}
+                getListsForMovie={getListsForMovie}
+                isMovieSaved={isMovieSaved}
+                isInSharedList={(externalId) => sharedMovieIds.has(externalId)}
+                onCreateList={createList}
+                onDeleteList={deleteList}
+                onAddToSharedList={handleAddToSharedList}
+                isSearching={search.isSearching}
+                t={t}
+              />
+            ) : null}
+
+            {screen === 'lista' ? (
+              <SharedListScreen
+                movies={movies.movies}
+                statusFilter={movies.statusFilter}
+                setStatusFilter={movies.setStatusFilter}
+                showVetoConfig={showVetoConfig}
+                setShowVetoConfig={setShowVetoConfig}
+                groupedGenreVetoes={groupedGenreVetoes}
+                currentUsername={movies.user?.username || ''}
+                onToggleGenreVeto={handleToggleGenreVeto}
+                onToggleMovieVeto={handleToggleMovieVeto}
+                t={t}
+                onOpenDetail={(movieId) => {
+                  movies.setSelectedMovieId(movieId)
+                  setScreen('detalle')
+                }}
+              />
+            ) : null}
+
+            {screen === 'mis-listas' ? (
+              <MyListsScreen
+                localLists={localLists}
+                onCreateList={createList}
+                onDeleteList={deleteList}
+                t={t}
+              />
+            ) : null}
+
+            {screen === 'detalle' ? (
+              <MovieDetailScreen
+                selectedMovie={movies.selectedMovie}
+                detailRatings={movies.detailRatings}
+                ratingState={getRatingState(movies.selectedMovie || {})}
+                onRatingChange={(updates) =>
+                  handleRatingChange(movies.selectedMovieId, updates)
                 }
+                onSaveRating={handleSaveRating}
+                onClearWatched={handleClearWatched}
+                t={t}
+              />
+            ) : null}
 
-                return (
-                  <li key={movie.id} className="movie-item">
-                    <div className="movie-main">
-                      <strong>
-                        {movie.title} {movie.year ? `(${movie.year})` : ''}
-                      </strong>
-                      <p>{movie.genres.join(', ')}</p>
-                      <p className="muted">
-                        Anadida por {movie.createdBy} | Nota media: {movie.avgRating || 'N/A'}
-                      </p>
-                      {movie.isVetoed ? (
-                        <p className="error small">
-                          Vetada
-                          {movie.vetoedBy.length ? ` por pelicula: ${movie.vetoedBy.join(', ')}` : ''}
-                          {movie.genreVetoedBy.length
-                            ? ` | por genero: ${movie.genreVetoedBy
-                                .map((x) => `${x.genre} (${x.username})`)
-                                .join(', ')}`
-                            : ''}
-                        </p>
-                      ) : (
-                        <p className="success small">Elegible</p>
-                      )}
-                    </div>
+            {screen === 'actividad' ? <ActivityScreen logs={movies.logs} t={t} /> : null}
+          </main>
 
-                    <div className="movie-actions">
-                      <div className="inline">
-                        <button onClick={() => vetoMovie(movie.id)}>Vetar pelicula</button>
-                        <button className="ghost" onClick={() => unvetoMovie(movie.id)}>
-                          Quitar mi veto
-                        </button>
-                      </div>
-
-                      <div className="inline rating-row">
-                        <span>Puntuacion</span>
-                        <input
-                          type="number"
-                          min="0.5"
-                          max="5"
-                          step="0.5"
-                          value={ratingState.rating}
-                          onChange={(e) =>
-                            setRatingInputs((prev) => ({
-                              ...prev,
-                              [movie.id]: {
-                                ...ratingState,
-                                rating: Number(e.target.value),
-                              },
-                            }))
-                          }
-                        />
-                        <span>Vista el</span>
-                        <input
-                          type="date"
-                          value={ratingState.watchedOn}
-                          onChange={(e) =>
-                            setRatingInputs((prev) => ({
-                              ...prev,
-                              [movie.id]: {
-                                ...ratingState,
-                                watchedOn: e.target.value,
-                              },
-                            }))
-                          }
-                        />
-                        <button onClick={() => saveRating(movie.id)}>Guardar</button>
-                      </div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
-
-          <section className="panel full-width">
-            <h2>Log de actividad</h2>
-            <ul className="result-list logs">
-              {logs.map((log) => (
-                <li key={log.id} className="movie-item compact">
-                  <div>
-                    <strong>{log.action}</strong>
-                    <p>
-                      {log.username || 'sistema'} | {new Date(log.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </main>
+        </>
       ) : (
-        <section className="panel auth-panel">
-          <h2>{authMode === 'login' ? 'Entrar' : 'Crear usuario'}</h2>
-          <form onSubmit={handleAuthSubmit} className="stack">
-            <input
-              type="text"
-              placeholder="Usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button type="submit">
-              {authMode === 'login' ? 'Entrar' : 'Registrarme'}
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-            >
-              {authMode === 'login' ? 'No tengo cuenta' : 'Ya tengo cuenta'}
-            </button>
-          </form>
-          {authError ? <p className="error">{authError}</p> : null}
-        </section>
+        <AuthScreen
+          authMode={auth.authMode}
+          setAuthMode={auth.setAuthMode}
+          username={auth.username}
+          setUsername={auth.setUsername}
+          password={auth.password}
+          setPassword={auth.setPassword}
+          authError={auth.authError}
+          onSubmit={auth.handleAuthSubmit}
+          t={t}
+        />
       )}
     </div>
   )
 }
 
 export default App
+

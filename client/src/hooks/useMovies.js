@@ -1,0 +1,174 @@
+/**
+ * useMovies Hook - Maneja películas, datos de ratings, y lógica de veto
+ */
+
+import { useState, useEffect } from 'react'
+import { moviesAPI, genreVetoAPI, logsAPI, authAPI } from '../services/api'
+
+export function useMovies(token) {
+  const [user, setUser] = useState(null)
+  const [movies, setMovies] = useState([])
+  const [genreVetoes, setGenreVetoes] = useState([])
+  const [logs, setLogs] = useState([])
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [genreFilter, setGenreFilter] = useState('')
+  const [selectedMovieId, setSelectedMovieId] = useState(null)
+  const [detailRatings, setDetailRatings] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const loadData = async () => {
+    if (!token) return
+
+    setLoading(true)
+    try {
+      const [me, moviesData, genreData, logsData] = await Promise.all([
+        authAPI.me(),
+        moviesAPI.getAll(statusFilter, genreFilter),
+        genreVetoAPI.getAll(),
+        logsAPI.getAll(),
+      ])
+
+      setUser(me)
+      setMovies(moviesData)
+      setGenreVetoes(genreData)
+      setLogs(logsData)
+      setError('')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Load data when token or filters change
+  useEffect(() => {
+    loadData()
+  }, [token, statusFilter, genreFilter])
+
+  // Load ratings when selected movie changes
+  useEffect(() => {
+    if (!selectedMovieId || !token) {
+      setDetailRatings([])
+      return
+    }
+
+    moviesAPI
+      .getRatings(selectedMovieId)
+      .then(setDetailRatings)
+      .catch(() => setDetailRatings([]))
+  }, [selectedMovieId, token])
+
+  const vetoMovie = async (movieId) => {
+    try {
+      await moviesAPI.veto(movieId)
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const unvetoMovie = async (movieId) => {
+    try {
+      await moviesAPI.unveto(movieId)
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const saveRating = async (movieId, rating, watchedOn) => {
+    try {
+      await moviesAPI.saveRating(movieId, rating, watchedOn)
+      await loadData()
+      return true
+    } catch (err) {
+      setError(err.message)
+      return false
+    }
+  }
+
+  const clearRating = async (movieId) => {
+    try {
+      await moviesAPI.clearRating(movieId)
+      await loadData()
+      return true
+    } catch (err) {
+      setError(err.message)
+      return false
+    }
+  }
+
+  const pickRandomMovie = async () => {
+    try {
+      const data = await moviesAPI.getRandomPick()
+      setSelectedMovieId(data.id)
+      return data
+    } catch (err) {
+      setError(err.message)
+      return null
+    }
+  }
+
+  const addMovie = async (movie) => {
+    try {
+      await moviesAPI.create(movie)
+      await loadData()
+      return true
+    } catch (err) {
+      setError(err.message)
+      return false
+    }
+  }
+
+  const addGenreVeto = async (genre) => {
+    try {
+      await genreVetoAPI.add(genre)
+      await loadData()
+      return true
+    } catch (err) {
+      setError(err.message)
+      return false
+    }
+  }
+
+  const removeGenreVeto = async (genre) => {
+    try {
+      await genreVetoAPI.remove(genre)
+      await loadData()
+      return true
+    } catch (err) {
+      setError(err.message)
+      return false
+    }
+  }
+
+  const selectedMovie = movies.find((m) => m.id === selectedMovieId) || null
+
+  return {
+    user,
+    setUser,
+    movies,
+    genreVetoes,
+    logs,
+    statusFilter,
+    setStatusFilter,
+    genreFilter,
+    setGenreFilter,
+    selectedMovieId,
+    setSelectedMovieId,
+    selectedMovie,
+    detailRatings,
+    loading,
+    error,
+    setError,
+    vetoMovie,
+    unvetoMovie,
+    saveRating,
+    clearRating,
+    pickRandomMovie,
+    addMovie,
+    addGenreVeto,
+    removeGenreVeto,
+  }
+}

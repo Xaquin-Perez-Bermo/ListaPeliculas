@@ -5,28 +5,32 @@ async function searchExternalMovies(query) {
     return [];
   }
 
+  const apiKey = process.env.OMDB_API_KEY || '263d22d8';
   const response = await fetch(
-    `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&media=movie&limit=25`
+    `https://www.omdbapi.com/?s=${encodeURIComponent(cleanQuery)}&type=movie&apikey=${encodeURIComponent(apiKey)}`
   );
 
   if (!response.ok) {
-    throw new Error('No se pudo consultar la API externa de peliculas');
+    throw new Error('No se pudo consultar la API de películas');
   }
 
   const data = await response.json();
-  const results = Array.isArray(data.results) ? data.results : [];
 
-  return results.map((item) => {
-    const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
-    const genre = item.primaryGenreName || 'Sin genero';
+  if (!Array.isArray(data.Search)) {
+    return [];
+  }
+
+  return data.Search.map((item) => {
+    const rawYear = Number.parseInt(String(item.Year || '').replaceAll(/\D/g, ''), 10);
 
     return {
-      externalId: `itunes-${item.trackId}`,
-      title: item.trackName || 'Sin titulo',
-      year,
-      genres: [genre],
-      posterUrl: item.artworkUrl100 || null,
-      overview: item.longDescription || item.shortDescription || '',
+      externalId: `omdb-${item.imdbID}`,
+      title: item.Title || 'Sin título',
+      year: Number.isNaN(rawYear) ? null : rawYear,
+      genres: [],
+      posterUrl: item.Poster && item.Poster !== 'N/A' ? item.Poster : null,
+      overview: '',
+      imdbId: item.imdbID || null,
     };
   });
 }
