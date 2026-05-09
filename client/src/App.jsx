@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import MovieList from './components/MovieList'
+import MovieListHeading from './components/MovieListHeading'
+import SearchBox from './components/SearchBox'
+import AddFavourites from './components/AddFavourites'
+import RemoveFavourites from './components/RemoveFavourites'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
@@ -7,6 +12,11 @@ function App() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
+
+  const [searchValue, setSearchValue] = useState('')
+  const [omdbMovies, setOmdbMovies] = useState([])
+  const [favourites, setFavourites] = useState([])
+  const [omdbError, setOmdbError] = useState('')
 
   const [movies, setMovies] = useState([])
   const [discoverQuery, setDiscoverQuery] = useState('')
@@ -78,6 +88,64 @@ function App() {
       localStorage.removeItem('token')
     })
   }, [token, statusFilter, genreFilter])
+
+  useEffect(() => {
+    const movieFavourites = JSON.parse(localStorage.getItem('react-movie-app-favourites'))
+    if (movieFavourites) {
+      setFavourites(movieFavourites)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!searchValue.trim()) {
+      setOmdbMovies([])
+      setOmdbError('')
+      return
+    }
+
+    const controller = new AbortController()
+    const searchUrl = `https://www.omdbapi.com/?s=${encodeURIComponent(searchValue)}&apikey=263d22d8`
+
+    fetch(searchUrl, { signal: controller.signal })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.Search) {
+          setOmdbMovies(data.Search)
+          setOmdbError('')
+        } else {
+          setOmdbMovies([])
+          setOmdbError(data.Error || 'No se encontraron peliculas')
+        }
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          setOmdbMovies([])
+          setOmdbError('Error al buscar peliculas')
+        }
+      })
+
+    return () => controller.abort()
+  }, [searchValue])
+
+  function saveToLocalStorage(items) {
+    localStorage.setItem('react-movie-app-favourites', JSON.stringify(items))
+  }
+
+  function addFavouriteMovie(movie) {
+    if (favourites.some((fav) => fav.imdbID === movie.imdbID)) return
+
+    const newFavouriteList = [...favourites, movie]
+    setFavourites(newFavouriteList)
+    saveToLocalStorage(newFavouriteList)
+  }
+
+  function removeFavouriteMovie(movie) {
+    const newFavouriteList = favourites.filter(
+      (favourite) => favourite.imdbID !== movie.imdbID,
+    )
+    setFavourites(newFavouriteList)
+    saveToLocalStorage(newFavouriteList)
+  }
 
   async function handleAuthSubmit(event) {
     event.preventDefault()
@@ -202,6 +270,36 @@ function App() {
 
       {token ? (
         <main className="grid">
+          <section className="panel">
+            <div className="panel-head">
+              <MovieListHeading heading="Buscador OMDB" />
+              <SearchBox
+                value={searchValue}
+                setSearchValue={setSearchValue}
+                placeholder="Buscar peliculas en OMDB..."
+              />
+            </div>
+
+            {omdbError ? <p className="error">{omdbError}</p> : null}
+
+            <div className="movie-row">
+              <MovieList
+                movies={omdbMovies}
+                handleFavouritesClick={addFavouriteMovie}
+                favouriteComponent={AddFavourites}
+              />
+            </div>
+
+            <MovieListHeading heading="Favoritos locales" />
+            <div className="movie-row">
+              <MovieList
+                movies={favourites}
+                handleFavouritesClick={removeFavouriteMovie}
+                favouriteComponent={RemoveFavourites}
+              />
+            </div>
+          </section>
+
           <section className="panel">
             <h2>Buscar peliculas</h2>
             <form onSubmit={handleDiscover} className="inline-form">
