@@ -1,7 +1,6 @@
 /**
  * RandomRouletteModal - Animated roulette for eligible movies
  */
-/* eslint-disable react/prop-types */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 

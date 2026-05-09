@@ -11,9 +11,8 @@ import { getTodayDate, groupGenreVetoesByGenre } from './utils/movieUtils'
 import { useI18n } from './i18n'
 import './App.css'
 
-// eslint-disable-next-line sonarjs/cognitive-complexity
 function App() {
-  const { language, setLanguage, t } = useI18n()
+  const { language, setLanguage, t, tGenre } = useI18n()
 
   // Auth state
   const auth = useAuth()
@@ -233,7 +232,6 @@ function App() {
                 setInternalQuery={search.setInternalQuery}
                 internalResults={search.internalResults}
                 selectedSearchMovie={search.selectedSearchMovie}
-                setSelectedSearchMovie={search.setSelectedSearchMovie}
                 watchmodeData={search.watchmodeData}
                 watchmodeDataById={search.watchmodeDataById}
                 watchmodeLoading={search.watchmodeLoading}
@@ -249,6 +247,7 @@ function App() {
                 onAddToSharedList={handleAddToSharedList}
                 isSearching={search.isSearching}
                 t={t}
+                tGenre={tGenre}
               />
             ) : null}
 
@@ -264,6 +263,7 @@ function App() {
                 onToggleGenreVeto={handleToggleGenreVeto}
                 onToggleMovieVeto={handleToggleMovieVeto}
                 t={t}
+                tGenre={tGenre}
                 onOpenDetail={(movieId) => {
                   movies.setSelectedMovieId(movieId)
                   setShowDetailModal(true)
@@ -289,7 +289,7 @@ function App() {
                   movies.setSelectedMovieId(movieId)
                   setShowDetailModal(true)
                 }}
-                getGenreLabel={(genre) => t(`genre${genre}`) || genre}
+                tGenre={tGenre}
               />
             ) : null}
 
@@ -308,6 +308,7 @@ function App() {
               onClearWatched={handleClearWatched}
               onClose={() => setShowDetailModal(false)}
               t={t}
+              tGenre={tGenre}
             />
           ) : null}
 

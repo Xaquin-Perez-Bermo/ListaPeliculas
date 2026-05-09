@@ -1,8 +1,6 @@
 /**
  * MovieDetailModal - Modal para mostrar detalles de película
  */
-/* eslint-disable react/prop-types */
-// eslint-disable-next-line react/prop-types
 export function MovieDetailModal({
   selectedMovie,
   detailRatings,
@@ -12,6 +10,7 @@ export function MovieDetailModal({
   onClearWatched,
   onClose,
   t,
+  tGenre,
 }) {
   if (!selectedMovie) {
     return null
@@ -30,7 +29,7 @@ export function MovieDetailModal({
         <div className="chip-row">
           {selectedMovie.genres.map((genre) => (
             <span key={`${selectedMovie.id}-detail-${genre}`} className="chip">
-              {genre}
+              {tGenre(genre)}
             </span>
           ))}
         </div>

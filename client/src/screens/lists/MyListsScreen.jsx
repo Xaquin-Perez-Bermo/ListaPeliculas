@@ -1,9 +1,7 @@
 /**
  * MyListsScreen - Pantalla de listas locales
  */
-/* eslint-disable react/prop-types */
 import { useState } from 'react'
-// eslint-disable-next-line react/prop-types
 export function MyListsScreen({ localLists, onCreateList, onDeleteList, t }) {
   const [newListName, setNewListName] = useState('')
 

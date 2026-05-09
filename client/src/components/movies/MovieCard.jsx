@@ -1,6 +1,5 @@
-import React from 'react'
 
-const MovieCard = ({ movie, currentUsername, t, onOpenDetail, onToggleMovieVeto, getGenreLabel }) => {
+const MovieCard = ({ movie, currentUsername, t, tGenre, onOpenDetail, onToggleMovieVeto }) => {
   return (
     <>
       <li key={movie.id} className="movie-card" onClick={() => onOpenDetail(movie.id)} style={{ cursor: 'pointer' }}>
@@ -11,7 +10,7 @@ const MovieCard = ({ movie, currentUsername, t, onOpenDetail, onToggleMovieVeto,
           <div className="chip-row">
             {movie.genres.map((genre) => (
               <span key={`${movie.id}-${genre}`} className="chip">
-                {getGenreLabel(genre)}
+                {tGenre(genre)}
               </span>
             ))}
           </div>

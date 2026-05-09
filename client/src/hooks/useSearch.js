@@ -2,7 +2,7 @@
  * useSearch Hook - Maneja búsqueda externa e interna
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { moviesAPI } from '../services/api'
 import {
   filterMoviesByQuery,
@@ -62,57 +62,49 @@ export function useSearch(movies, logs) {
   const handleDiscover = useCallback(async (event) => {
     event.preventDefault()
     setDiscoverError('')
+    setDiscoverResults([])
     setSelectedSearchMovie(null)
     setWatchmodeData(null)
+    setWatchmodeDataById({})
+    setWatchmodeLoadingById({})
+    setWatchmodeError('')
     setIsSearching(true)
 
     try {
       const data = await moviesAPI.discover(discoverQuery)
-      setDiscoverResults(data)
+      const normalizedResults = Array.isArray(data) ? data : []
+
+      // Precarga Watchmode al buscar para que el panel abra con datos listos.
+      if (normalizedResults.length > 0) {
+        await Promise.allSettled(
+          normalizedResults.map((movie) => fetchWatchmodeDataForMovie(movie)),
+        )
+      }
+
+      // Mostrar resultados solo cuando termina la precarga completa.
+      setDiscoverResults(normalizedResults)
     } catch (error) {
       setDiscoverError(error.message)
       setDiscoverResults([])
     } finally {
       setIsSearching(false)
     }
-  }, [discoverQuery])
-
-  useEffect(() => {
-    if (!discoverResults.length) {
-      return
-    }
-
-    discoverResults.forEach((movie) => {
-      fetchWatchmodeDataForMovie(movie).catch(() => {})
-    })
-  }, [discoverResults, fetchWatchmodeDataForMovie])
+  }, [discoverQuery, fetchWatchmodeDataForMovie])
 
   const fetchWatchmodeData = useCallback(async (movie) => {
     setSelectedSearchMovie(movie)
     setWatchmodeError('')
-    setWatchmodeLoading(true)
-
-    const key = movie.externalId || `${movie.title}-${movie.year}`
-    const cached = watchmodeDataById[key]
-    if (cached !== undefined) {
-      setWatchmodeData(cached)
-      setWatchmodeLoading(false)
-      return
-    }
 
     try {
-      const data = await moviesAPI.getWatchmodeData(movie.title, movie.year)
-      setWatchmodeDataById((prev) => ({
-        ...prev,
-        [key]: data,
-      }))
+      setWatchmodeLoading(true)
+      const data = await fetchWatchmodeDataForMovie(movie)
       setWatchmodeData(data)
     } catch (error) {
       setWatchmodeError(error.message)
     } finally {
       setWatchmodeLoading(false)
     }
-  }, [watchmodeDataById])
+  }, [fetchWatchmodeDataForMovie])
 
   const internalResults = {
     movies: filterMoviesByQuery(movies, internalQuery),

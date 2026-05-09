@@ -1,7 +1,6 @@
 /**
  * ListSelector - Selector para añadir películas a listas
  */
-/* eslint-disable react/prop-types */
 
 import { useState } from 'react'
 

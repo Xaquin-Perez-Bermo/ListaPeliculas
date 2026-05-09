@@ -1,7 +1,6 @@
 /**
  * WatchmodePanel - Panel con info de la película de Watchmode
  */
-/* eslint-disable react/prop-types, sonarjs/cognitive-complexity */
 import { useState } from 'react'
 import ListSelector from './lists/ListSelector'
 
@@ -20,6 +19,7 @@ function WatchmodePanel({
   onDeleteList,
   onAddToSharedList,
   t,
+  tGenre,
 }) {
   const [showListSelector, setShowListSelector] = useState(false)
   const savedLocalLists = getListsForMovie(selectedSearchMovie?.externalId)
@@ -58,7 +58,7 @@ function WatchmodePanel({
           <div className="chip-row">
             {(watchmodeData.genre_names || selectedSearchMovie.genres).map((genre) => (
               <span key={`wm-${genre}`} className="chip">
-                {genre}
+                {tGenre(genre)}
               </span>
             ))}
           </div>

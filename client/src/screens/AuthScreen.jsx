@@ -1,8 +1,6 @@
 /**
  * AuthScreen - Pantalla de autenticación
  */
-/* eslint-disable react/prop-types */
-// eslint-disable-next-line react/prop-types
 export function AuthScreen({
   authMode,
   setAuthMode,

@@ -1,9 +1,9 @@
-import React from 'react'
 
 const SearchMovieCard = ({
   movie,
   setLikeTargetMovie,
   t,
+  tGenre,
   fetchWatchmodeData,
   selectedSearchMovie,
   hasSavedAnywhere,
@@ -12,7 +12,7 @@ const SearchMovieCard = ({
   const isSelected = selectedSearchMovie?.externalId === movie.externalId
   const watchmodePlot =
     watchmodeData?.plot_overview ||
-    (watchmodeData?.plot_overviews?.[0] && watchmodeData.plot_overviews[0].body) ||
+    watchmodeData?.plot_overviews?.[0]?.body ||
     ''
   const watchmodeGenres = watchmodeData?.genre_names || []
   const moviePlot = movie.overview || watchmodePlot
@@ -20,11 +20,13 @@ const SearchMovieCard = ({
   const hasWatchmodeInfo = Boolean(moviePlot || movieGenres.length)
 
   return (
-    <li
-      className={`movie-card search-card${isSelected ? ' card-selected' : ''}`}
-      onClick={() => fetchWatchmodeData(movie)}
-      style={{ cursor: 'pointer' }}
-    >
+    <li className={`movie-card search-card${isSelected ? ' card-selected' : ''}`}>
+      <button
+        type="button"
+        className="search-card-hitbox"
+        onClick={() => fetchWatchmodeData(movie)}
+        aria-label={t('openMovieInfoAria', { title: movie.title })}
+      >
       {movie.posterUrl ? (
         <img
           src={movie.posterUrl}
@@ -46,7 +48,7 @@ const SearchMovieCard = ({
                 <div className="chip-row search-genre-row">
                   {movieGenres.map((genre) => (
                     <span key={genre} className="chip">
-                      {genre}
+                      {tGenre(genre)}
                     </span>
                   ))}
                 </div>
@@ -71,6 +73,7 @@ const SearchMovieCard = ({
           </button>
         </div>
       </div>
+      </button>
     </li>
   )
 }

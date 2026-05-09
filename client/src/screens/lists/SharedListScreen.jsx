@@ -1,12 +1,10 @@
 /**
  * SharedListScreen - Pantalla de lista conjunta
  */
-/* eslint-disable react/prop-types */
 import { useState, useEffect } from 'react'
 import { RandomRouletteModal } from '../RandomRouletteModal'
 import MovieCard from '../../components/movies/MovieCard'
 
-// eslint-disable-next-line react/prop-types
 export function SharedListScreen({
   movies,
   statusFilter,
@@ -18,6 +16,7 @@ export function SharedListScreen({
   onToggleGenreVeto,
   onToggleMovieVeto,
   t,
+  tGenre,
   onOpenDetail,
 }) {
   const [showRoulette, setShowRoulette] = useState(false)
@@ -31,34 +30,6 @@ export function SharedListScreen({
   useEffect(() => {
     localStorage.setItem('selectedGenres', JSON.stringify(selectedGenres))
   }, [selectedGenres])
-
-  const genreKeyMap = {
-    Action: 'genreAction',
-    Adventure: 'genreAdventure',
-    Animation: 'genreAnimation',
-    Biography: 'genreBiography',
-    Comedy: 'genreComedy',
-    Crime: 'genreCrime',
-    Documentary: 'genreDocumentary',
-    Drama: 'genreDrama',
-    Family: 'genreFamily',
-    Fantasy: 'genreFantasy',
-    History: 'genreHistory',
-    Horror: 'genreHorror',
-    Music: 'genreMusic',
-    Musical: 'genreMusical',
-    Mystery: 'genreMystery',
-    Romance: 'genreRomance',
-    'Sci-Fi': 'genreSciFi',
-    Thriller: 'genreThriller',
-    War: 'genreWar',
-    Western: 'genreWestern',
-  }
-
-  const getGenreLabel = (genre) => {
-    const key = genreKeyMap[genre]
-    return key ? t(key) : genre
-  }
 
   const availableGenres = [...new Set(movies.flatMap((movie) => movie.genres || []))].sort(
     (a, b) => a.localeCompare(b),
@@ -113,7 +84,7 @@ export function SharedListScreen({
                     onClick={() => onToggleGenreVeto(genre, hasMyVeto)}
                     title={hasMyVeto ? t('removeMyVeto') : t('addGenreVeto')}
                   >
-                    {getGenreLabel(genre)}
+                    {tGenre(genre)}
                   </button>
                 )
               })
@@ -145,7 +116,7 @@ export function SharedListScreen({
                     checked={isChecked}
                     onChange={() => toggleGenreFilter(genre)}
                   />
-                  <span>{getGenreLabel(genre)}</span>
+                  <span>{tGenre(genre)}</span>
                 </label>
               )
             })
@@ -172,9 +143,9 @@ export function SharedListScreen({
             movie={movie}
             currentUsername={currentUsername}
             t={t}
+            tGenre={tGenre}
             onOpenDetail={onOpenDetail}
             onToggleMovieVeto={onToggleMovieVeto}
-            getGenreLabel={getGenreLabel}
           />
         ))}
       </ul>

@@ -38,6 +38,12 @@
   transition: all 0.2s ease;
 }
 
+.search-card-hitbox {
+  all: unset;
+  display: contents;
+  cursor: pointer;
+}
+
 .search-card:hover {
   background: rgba(20, 108, 103, 0.05);
   transform: translateX(2px);
@@ -87,6 +93,10 @@
   margin: 0;
   line-height: 1.5;
   max-height: 4.5rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
   text-overflow: ellipsis;
 }

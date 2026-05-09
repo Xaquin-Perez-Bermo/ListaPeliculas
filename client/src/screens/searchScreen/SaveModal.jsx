@@ -1,8 +1,6 @@
 /**
  * Modal para seleccionar destino al hacer like a una película
  */
-/* eslint-disable react/prop-types */
-// eslint-disable-next-line react/prop-types
 export function LikeModal({ movie, onChoose, onCancel }) {
   return (
     <div className="modal-backdrop">

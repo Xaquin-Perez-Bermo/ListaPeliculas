@@ -2,7 +2,7 @@
  * useMovies Hook - Maneja películas, datos de ratings, y lógica de veto
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { moviesAPI, genreVetoAPI, logsAPI, authAPI } from '../services/api'
 
 export function useMovies(token) {
@@ -20,7 +20,7 @@ export function useMovies(token) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!token) return
 
     setLoading(true)
@@ -42,12 +42,12 @@ export function useMovies(token) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token, statusFilter, genreFilter])
 
   // Load data when token or filters change
   useEffect(() => {
     loadData()
-  }, [token, statusFilter, genreFilter])
+  }, [loadData])
 
   // Guardar statusFilter en localStorage cuando cambie
   useEffect(() => {
