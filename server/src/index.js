@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('node:path').join(__dirname, '..', '.env') });
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -29,6 +31,53 @@ function splitGenres(raw) {
     .split(',')
     .map((g) => g.trim())
     .filter(Boolean);
+}
+
+async function fetchOmdbGenresByImdbId(imdbId) {
+  const apiKey = process.env.OMDB_API_KEY || '263d22d8';
+
+  const response = await fetch(
+    `https://www.omdbapi.com/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(apiKey)}`
+  );
+
+  if (!response.ok) return [];
+
+  const data = await response.json();
+  if (data.Response === 'False') return [];
+
+  return splitGenres(data.Genre);
+}
+
+async function hydrateMissingGenres(movies) {
+  const missing = movies.filter(
+    (movie) =>
+      (!movie.genres || movie.genres.length === 0) &&
+      typeof movie.externalId === 'string' &&
+      movie.externalId.startsWith('omdb-')
+  );
+
+  if (!missing.length) return false;
+
+  let updated = false;
+
+  await Promise.all(
+    missing.map(async (movie) => {
+      const imdbId = movie.externalId.replace('omdb-', '').trim();
+      if (!imdbId) return;
+
+      try {
+        const genres = await fetchOmdbGenresByImdbId(imdbId);
+        if (!genres.length) return;
+
+        run(`UPDATE movies SET genres = ? WHERE id = ?`, [normalizeGenres(genres), movie.id]);
+        updated = true;
+      } catch {
+        // Ignore OMDB errors and continue serving data
+      }
+    })
+  );
+
+  return updated;
 }
 
 function buildMovieList(currentUserId) {
@@ -176,11 +225,16 @@ app.get('/api/discover', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/movies', requireAuth, (req, res) => {
+app.get('/api/movies', requireAuth, async (req, res) => {
   const status = String(req.query.status || 'all');
   const genreFilter = String(req.query.genre || '').trim().toLowerCase();
 
   let movies = buildMovieList(req.user.id);
+
+  const hydrated = await hydrateMissingGenres(movies);
+  if (hydrated) {
+    movies = buildMovieList(req.user.id);
+  }
 
   if (genreFilter) {
     movies = movies.filter((m) =>
@@ -360,6 +414,62 @@ app.post('/api/movies/:id/rating', requireAuth, (req, res) => {
   logAction('movie_rated', { movieId, rating, watchedOn }, req.user.id);
 
   return res.status(201).json({ ok: true });
+});
+
+app.delete('/api/movies/:id/rating', requireAuth, (req, res) => {
+  const movieId = Number(req.params.id);
+  const movie = get(`SELECT id, title FROM movies WHERE id = ?`, [movieId]);
+
+  if (!movie) {
+    return res.status(404).json({ error: 'Pelicula no encontrada' });
+  }
+
+  run(`DELETE FROM ratings WHERE user_id = ? AND movie_id = ?`, [req.user.id, movieId]);
+
+  logAction('movie_rating_removed', { movieId, title: movie.title }, req.user.id);
+
+  return res.json({ ok: true });
+});
+
+app.get('/api/watchmode', requireAuth, async (req, res) => {
+  const title = String(req.query.title || '').trim();
+  const year = req.query.year ? Number(req.query.year) : null;
+
+  if (!title) {
+    return res.status(400).json({ error: 'Se requiere titulo' });
+  }
+
+  const apiKey = process.env.WATCHMODE_API_KEY;
+
+  if (!apiKey) {
+    return res.status(503).json({ error: 'Watchmode no configurado en el servidor' });
+  }
+
+  try {
+    const searchResp = await fetch(
+      `https://api.watchmode.com/v1/search/?apiKey=${encodeURIComponent(apiKey)}&search_field=name&search_value=${encodeURIComponent(title)}&search_type=3`
+    );
+    const searchData = await searchResp.json();
+
+    if (!searchData.title_results?.length) {
+      return res.json(null);
+    }
+
+    let bestMatch = searchData.title_results[0];
+    if (year) {
+      const byYear = searchData.title_results.find((r) => r.year === year);
+      if (byYear) bestMatch = byYear;
+    }
+
+    const detailResp = await fetch(
+      `https://api.watchmode.com/v1/title/${bestMatch.id}/details/?apiKey=${encodeURIComponent(apiKey)}&append_to_response=sources`
+    );
+    const detail = await detailResp.json();
+
+    return res.json(detail);
+  } catch {
+    return res.status(502).json({ error: 'Error al consultar Watchmode' });
+  }
 });
 
 app.get('/api/movies/:id/ratings', requireAuth, (req, res) => {
