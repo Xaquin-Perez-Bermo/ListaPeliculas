@@ -2,7 +2,36 @@ import { createContext, useContext, useMemo, useState } from 'react'
 import { translations } from './translations'
 
 const I18nContext = createContext(null)
-/* eslint-disable react/prop-types */
+
+const genreTranslationKeyByToken = {
+  action: 'genreAction',
+  adventure: 'genreAdventure',
+  animation: 'genreAnimation',
+  biography: 'genreBiography',
+  comedy: 'genreComedy',
+  crime: 'genreCrime',
+  documentary: 'genreDocumentary',
+  drama: 'genreDrama',
+  family: 'genreFamily',
+  fantasy: 'genreFantasy',
+  history: 'genreHistory',
+  horror: 'genreHorror',
+  music: 'genreMusic',
+  musical: 'genreMusical',
+  mystery: 'genreMystery',
+  romance: 'genreRomance',
+  scifi: 'genreSciFi',
+  sciencefiction: 'genreSciFi',
+  thriller: 'genreThriller',
+  war: 'genreWar',
+  western: 'genreWestern',
+}
+
+function normalizeGenreToken(genre) {
+  return String(genre || '')
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '')
+}
 
 function interpolate(template, vars = {}) {
   return Object.entries(vars).reduce((acc, [key, value]) => {
@@ -21,10 +50,17 @@ export function I18nProvider({ children }) {
       return typeof candidate === 'string' ? interpolate(candidate, vars) : key
     }
 
+    const tGenre = (genre) => {
+      const token = normalizeGenreToken(genre)
+      const key = genreTranslationKeyByToken[token]
+      return key ? t(key) : genre
+    }
+
     return {
       language,
       setLanguage,
       t,
+      tGenre,
     }
   }, [language])
 

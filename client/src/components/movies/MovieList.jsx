@@ -1,4 +1,3 @@
-import React from 'react'
 
 const MovieList = ({ movies, handleFavouritesClick, favouriteComponent: FavouriteComponent }) => {
   return (

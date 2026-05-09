@@ -2,23 +2,16 @@
  * useAuth Hook - Maneja la lógica de autenticación
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { authAPI, setToken, getToken } from '../services/api'
 
 export function useAuth() {
-  const [token, setAuthToken] = useState('')
+  const [authToken, setAuthToken] = useState(() => getToken() || '')
   const [user, setUser] = useState(null)
   const [authMode, setAuthMode] = useState('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
-
-  useEffect(() => {
-    const savedToken = getToken()
-    if (savedToken) {
-      setAuthToken(savedToken)
-    }
-  }, [])
 
   const handleAuthSubmit = async (event) => {
     event.preventDefault()
@@ -47,7 +40,7 @@ export function useAuth() {
   }
 
   return {
-    token,
+    token: authToken,
     setAuthToken,
     user,
     setUser,
@@ -61,7 +54,7 @@ export function useAuth() {
     setAuthError,
     handleAuthSubmit,
     logout,
-    isAuthenticated: !!token,
+    isAuthenticated: !!authToken,
   }
 }
 

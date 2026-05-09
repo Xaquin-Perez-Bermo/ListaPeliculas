@@ -1,13 +1,11 @@
 /**
  * SearchScreen - Pantalla de búsqueda
  */
-/* eslint-disable react/prop-types, sonarjs/cognitive-complexity */
 import SearchMovieCard from '../../components/search/SearchMovieCard'
 import WatchmodePanel from '../WatchmodePanel'
 import ListSelector from '../lists/ListSelector'
 import { useState } from 'react'
 
-// eslint-disable-next-line react/prop-types
 function ExternalSearchSection({
   discoverQuery,
   setDiscoverQuery,
@@ -15,7 +13,6 @@ function ExternalSearchSection({
   discoverError,
   handleDiscover,
   selectedSearchMovie,
-  setSelectedSearchMovie,
   watchmodeData,
   watchmodeDataById = {},
   watchmodeLoading,
@@ -31,6 +28,7 @@ function ExternalSearchSection({
   onDeleteList,
   onAddToSharedList,
   t,
+  tGenre,
 }) {
   const [likeTargetMovie, setLikeTargetMovie] = useState(null)
   const [showWatchmodePanel, setShowWatchmodePanel] = useState(false)
@@ -50,12 +48,14 @@ function ExternalSearchSection({
       </form>
 
       {discoverError ? <p className="error">{discoverError}</p> : null}
+      {isSearching ? <p className="muted">⏳ {t('searchingButton')}</p> : null}
 
       {discoverResults.length > 0 ? (
         <>
           <div className="search-layout">
             <ul className="result-list search-results-col">
               {discoverResults.map((movie) => {
+                  const watchmodeKey = movie.externalId || `${movie.title}-${movie.year}`
                   const savedInLists = getListsForMovie(movie.externalId)
                   const hasSavedLocal = savedInLists.length > 0
                   const hasSavedAnywhere = hasSavedLocal || isInSharedList(movie.externalId)
@@ -65,12 +65,13 @@ function ExternalSearchSection({
                   movie={movie}
                   setLikeTargetMovie={setLikeTargetMovie}
                   t={t}
+                  tGenre={tGenre}
                   fetchWatchmodeData={(movie) => {
                     fetchWatchmodeData(movie)
                     setShowWatchmodePanel(true)
                   }}
                   selectedSearchMovie={selectedSearchMovie}
-                  watchmodeData={watchmodeDataById?.[movie.externalId]}
+                  watchmodeData={watchmodeDataById?.[watchmodeKey]}
                   hasSavedAnywhere={hasSavedAnywhere}
                 />
                   )
@@ -101,6 +102,7 @@ function ExternalSearchSection({
                   onDeleteList={onDeleteList}
                   onAddToSharedList={onAddToSharedList}
                   t={t}
+                  tGenre={tGenre}
                 />
               </>
             ) : null}
@@ -153,8 +155,7 @@ function ExternalSearchSection({
   )
 }
 
-// eslint-disable-next-line react/prop-types
-function InternalSearchSection({ internalQuery, setInternalQuery, internalResults, t }) {
+function InternalSearchSection({ internalQuery, setInternalQuery, internalResults, t, tGenre }) {
   const { movies: internalMovies, logs: internalLogs } = internalResults
 
   return (
@@ -184,7 +185,7 @@ function InternalSearchSection({ internalQuery, setInternalQuery, internalResult
                       <div className="chip-row">
                         {movie.genres.map((genre) => (
                           <span key={`int-${movie.id}-${genre}`} className="chip">
-                            {genre}
+                            {tGenre(genre)}
                           </span>
                         ))}
                       </div>
@@ -228,7 +229,6 @@ function InternalSearchSection({ internalQuery, setInternalQuery, internalResult
   )
 }
 
-// eslint-disable-next-line react/prop-types
 export function SearchScreen({
   searchMode,
   setSearchMode,
@@ -241,7 +241,6 @@ export function SearchScreen({
   setInternalQuery,
   internalResults,
   selectedSearchMovie,
-  setSelectedSearchMovie,
   watchmodeData,
   watchmodeDataById,
   watchmodeLoading,
@@ -257,6 +256,7 @@ export function SearchScreen({
   onDeleteList,
   onAddToSharedList,
   t,
+  tGenre,
 }) {
   return (
     <section className="panel">
@@ -285,7 +285,6 @@ export function SearchScreen({
           discoverError={discoverError}
           handleDiscover={handleDiscover}
           selectedSearchMovie={selectedSearchMovie}
-          setSelectedSearchMovie={setSelectedSearchMovie}
           watchmodeData={watchmodeData}
           watchmodeDataById={watchmodeDataById}
           watchmodeLoading={watchmodeLoading}
@@ -301,6 +300,7 @@ export function SearchScreen({
           onDeleteList={onDeleteList}
           onAddToSharedList={onAddToSharedList}
           t={t}
+          tGenre={tGenre}
         />
       ) : (
         <InternalSearchSection
@@ -308,6 +308,7 @@ export function SearchScreen({
           setInternalQuery={setInternalQuery}
           internalResults={internalResults}
           t={t}
+          tGenre={tGenre}
         />
       )}
     </section>

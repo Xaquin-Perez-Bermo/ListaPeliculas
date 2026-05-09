@@ -32,7 +32,7 @@ export async function apiCall(path, options = {}) {
     headers,
   })
 
-  let body = {}
+  let body
   try {
     body = await response.json()
   } catch {

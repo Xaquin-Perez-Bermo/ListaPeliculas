@@ -1,8 +1,6 @@
 /**
  * MovieDetailScreen - Pantalla de detalle de película
  */
-/* eslint-disable react/prop-types */
-// eslint-disable-next-line react/prop-types
 export function MovieDetailScreen({
   selectedMovie,
   detailRatings,
@@ -11,6 +9,7 @@ export function MovieDetailScreen({
   onSaveRating,
   onClearWatched,
   t,
+  tGenre,
 }) {
   if (!selectedMovie) {
     return (
@@ -33,7 +32,7 @@ export function MovieDetailScreen({
       <div className="chip-row">
         {selectedMovie.genres.map((genre) => (
           <span key={`${selectedMovie.id}-detail-${genre}`} className="chip">
-            {genre}
+            {tGenre(genre)}
           </span>
         ))}
       </div>

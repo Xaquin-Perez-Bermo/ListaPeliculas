@@ -1,8 +1,6 @@
 /**
  * ActivityScreen - Pantalla de actividad
  */
-/* eslint-disable react/prop-types */
-// eslint-disable-next-line react/prop-types
 export function ActivityScreen({ logs, t }) {
   return (
     <section className="panel">

@@ -1,4 +1,3 @@
-import React from 'react'
 
 const SearchBox = ({ value, setSearchValue, placeholder = 'Buscar...' }) => (
   <div className="search-box">

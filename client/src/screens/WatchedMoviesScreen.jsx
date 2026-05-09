@@ -1,16 +1,14 @@
 /**
  * WatchedMoviesScreen - Pantalla de películas vistas
  */
-/* eslint-disable react/prop-types */
 import MovieCard from '../components/movies/MovieCard'
 
-// eslint-disable-next-line react/prop-types
 export function WatchedMoviesScreen({
   movies,
   currentUsername,
   t,
+  tGenre,
   onOpenDetail,
-  getGenreLabel,
 }) {
   // Filtrar películas vistas (que tienen myRating)
   const watchedMovies = movies.filter(movie => movie.myRating)
@@ -30,9 +28,9 @@ export function WatchedMoviesScreen({
               movie={movie}
               currentUsername={currentUsername}
               t={t}
+              tGenre={tGenre}
               onOpenDetail={onOpenDetail}
               onToggleMovieVeto={() => {}} // No veto en esta pantalla
-              getGenreLabel={getGenreLabel}
             />
           ))
         ) : (
