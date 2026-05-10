@@ -91,10 +91,10 @@ export const moviesAPI = {
   discover: (query) =>
     apiCall(`/api/discover?q=${encodeURIComponent(query)}`),
 
-  getWatchmodeData: (title, year) => {
+  getStreamingInfo: (title, year) => {
     const params = new URLSearchParams({ title })
     if (year) params.set('year', year)
-    return apiCall(`/api/watchmode?${params}`)
+    return apiCall(`/api/streaming-info?${params}`)
   },
 
   getRatings: (id) => apiCall(`/api/movies/${id}/ratings`),

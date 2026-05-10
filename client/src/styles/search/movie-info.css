@@ -1,36 +1,10 @@
-.modal-panel {
-  position: relative;
-  width: 100%;
-  max-width: 500px;
-  background: white;
-  border-radius: 18px;
-  padding: 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  z-index: 2001;
-
-  max-height: 90vh;
+.modal.movie-info-modal {
+  width: min(760px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
   overflow-y: auto;
-
-  /* Animación de "aparición" desde el centro */
-  animation: zoomInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.modal-panel h3 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-  animation: fadeInDown 0.4s ease-out 0.1s backwards;
-}
-
-.modal-panel h4 {
-  margin: 12px 0 6px;
-  font-size: 0.9rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  animation: fadeInDown 0.4s ease-out 0.2s backwards;
-}
-
-.wm-poster {
+.movie-info-poster {
   width: 100%;
   max-height: 220px;
   object-fit: cover;
@@ -40,11 +14,11 @@
   transition: transform 0.3s ease;
 }
 
-.wm-poster:hover {
+.movie-info-poster:hover {
   transform: scale(1.02);
 }
 
-.wm-meta {
+.movie-info-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -55,7 +29,7 @@
   animation: fadeIn 0.4s ease-out 0.3s backwards;
 }
 
-.wm-plot {
+.movie-info-plot {
   font-size: 0.9rem;
   line-height: 1.55;
   color: var(--ink);
@@ -92,9 +66,36 @@
   box-shadow: 0 2px 8px rgba(10, 85, 80, 0.15);
 }
 
-.wm-actions {
+.movie-info-actions {
   margin-top: 14px;
   padding-top: 10px;
   border-top: 1px solid var(--line);
   animation: fadeIn 0.4s ease-out 0.45s backwards;
+}
+
+@media (max-width: 640px) {
+  .modal.movie-info-modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .movie-info-poster {
+    max-height: 180px;
+  }
+
+  .movie-info-meta {
+    gap: 6px;
+    font-size: 0.82rem;
+  }
+
+  .source-chip {
+    font-size: 0.78rem;
+    padding: 4px 8px;
+  }
+
+  .movie-info-actions button {
+    width: 100%;
+  }
 }

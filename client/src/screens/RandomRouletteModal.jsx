@@ -3,6 +3,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ModalContainer from '../components/general/ModalContainer'
+import CloseModalButton from '../components/general/CloseModalButton'
 
 const CANVAS_SIZE = 320
 const RADIUS = 150
@@ -99,57 +101,47 @@ export function RandomRouletteModal({ movies, onClose, onOpenDetail, t }) {
   }
 
   return (
-    <>
-      <button
-        className="roulette-backdrop"
-        type="button"
-        onClick={onClose}
-        aria-label={t('closeRouletteAria')}
-      />
-      <dialog className="roulette-modal" open>
-        <div className="panel-head">
-          <h3>{t('rouletteTitle')}</h3>
-          <button className="ghost" type="button" onClick={onClose}>
-            {t('close')}
-          </button>
-        </div>
+    <ModalContainer onClose={onClose} t={t} className="modal roulette">
+      <div className="panel-head">
+        <h3>{t('rouletteTitle')}</h3>
+        <CloseModalButton onClose={onClose} t={t} />
+      </div>
 
-        {eligibleMovies.length === 0 ? (
-          <p className="error">{t('rouletteNoEligible')}</p>
-        ) : (
-          <>
-            <div className="roulette-pointer">▼</div>
-            <canvas
-              ref={canvasRef}
-              width={CANVAS_SIZE}
-              height={CANVAS_SIZE}
-              className="roulette-canvas"
-            />
-            <div className="roulette-actions">
-              <button type="button" onClick={spin} disabled={spinning}>
-                {spinning ? t('rouletteSpinning') : t('rouletteSpinButton')}
-              </button>
-              {pickedMovie ? (
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => onOpenDetail(pickedMovie.id)}
-                >
-                  {t('rouletteViewDetail', { title: pickedMovie.title })}
-                </button>
-              ) : null}
-            </div>
+      {eligibleMovies.length === 0 ? (
+        <p className="error">{t('rouletteNoEligible')}</p>
+      ) : (
+        <>
+          <div className="roulette-pointer">▼</div>
+          <canvas
+            ref={canvasRef}
+            width={CANVAS_SIZE}
+            height={CANVAS_SIZE}
+            className="roulette-canvas"
+          />
+          <div className="roulette-actions">
+            <button type="button" onClick={spin} disabled={spinning}>
+              {spinning ? t('rouletteSpinning') : t('rouletteSpinButton')}
+            </button>
             {pickedMovie ? (
-              <p className="success roulette-result">
-                {t('rouletteResult', {
-                  title: pickedMovie.title,
-                  year: pickedMovie.year || t('naLabel'),
-                })}
-              </p>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => onOpenDetail(pickedMovie.id)}
+              >
+                {t('rouletteViewDetail', { title: pickedMovie.title })}
+              </button>
             ) : null}
-          </>
-        )}
-      </dialog>
-    </>
+          </div>
+          {pickedMovie ? (
+            <p className="success roulette-result">
+              {t('rouletteResult', {
+                title: pickedMovie.title,
+                year: pickedMovie.year || t('naLabel'),
+              })}
+            </p>
+          ) : null}
+        </>
+      )}
+    </ModalContainer>
   )
 }
