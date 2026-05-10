@@ -31,9 +31,14 @@ button.ghost {
   color: var(--accent);
 }
 
+button.close-modal-btn {
+  margin-bottom: 1rem;
+}
+
 .like-button {
   background: var(--accent-2);
   border-color: var(--accent-2);
+  margin-left: auto;
 }
 
 .like-button.saved {
