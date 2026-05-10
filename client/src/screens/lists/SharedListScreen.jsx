@@ -3,7 +3,8 @@
  */
 import { useState, useEffect } from 'react'
 import { RandomRouletteModal } from '../RandomRouletteModal'
-import MovieCard from '../../components/movies/MovieCard'
+import MovieCard from '../../components/movieList/MovieListCard'
+import MovieListCard from '../../components/movieList/MovieListCard'
 
 export function SharedListScreen({
   movies,
@@ -136,9 +137,10 @@ export function SharedListScreen({
         />
       ) : null}
 
+      {/* Lista de películas */}
       <ul className="result-list">
         {filteredMovies.map((movie) => (
-          <MovieCard
+          <MovieListCard
             key={movie.id}
             movie={movie}
             currentUsername={currentUsername}

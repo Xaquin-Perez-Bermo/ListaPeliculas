@@ -1,7 +1,7 @@
 /**
  * WatchedMoviesScreen - Pantalla de películas vistas
  */
-import MovieCard from '../components/movies/MovieCard'
+import MovieCard from '../components/movieList/MovieListCard'
 
 export function WatchedMoviesScreen({
   movies,
