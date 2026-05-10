@@ -1,3 +1,5 @@
+import ModalContainer from "../components/general/ModalContainer"
+
 /**
  * MovieDetailModal - Modal para mostrar detalles de película
  */
@@ -17,7 +19,7 @@ export function MovieDetailModal({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <ModalContainer onClose={onClose} t={t}>
       <div className="modal large" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>
@@ -91,6 +93,6 @@ export function MovieDetailModal({
           )}
         </ul>
       </div>
-    </div>
+    </ModalContainer>
   )
 }

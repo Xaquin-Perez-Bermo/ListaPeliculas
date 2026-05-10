@@ -26,7 +26,7 @@ src/
 │   ├── MyListsScreen.jsx (mis listas)
 │   ├── MovieDetailScreen.jsx (detalle película)
 │   ├── ActivityScreen.jsx (actividad)
-│   └── LikeModal.jsx (modal de destino)
+│   └── ModalSaveMovie.jsx (modal de destino)
 ├── services/
 │   ├── api.js (llamadas a API centralizadas)
 │   └── localStorage.js (gestión localStorage)
@@ -93,7 +93,7 @@ App.jsx (orquestador)
 
 AuthScreen → api.login/register → setToken → loadData
 SearchScreen → api.discover/watchmode → MovieDetailScreen
-SharedListScreen → api.veto/rating → LikeModal → addMovie
+SharedListScreen → api.veto/rating → ModalSaveMovie → addMovie
 ```
 
 ## 📝 Próximos Pasos (Opcional)

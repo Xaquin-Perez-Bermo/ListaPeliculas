@@ -1,28 +1,27 @@
-.watchmode-panel {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px;
-  background: #f8fcfb;
-  position: fixed;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 380px;
-  max-width: calc(100vw - 40px);
-  animation: slideInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  max-height: 80vh;
+.modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 2001;
+
+  max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+
+  /* Animación de "aparición" desde el centro */
+  animation: zoomInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.watchmode-panel h3 {
+.modal-panel h3 {
   margin: 0 0 8px;
   font-size: 1rem;
   animation: fadeInDown 0.4s ease-out 0.1s backwards;
 }
 
-.watchmode-panel h4 {
+.modal-panel h4 {
   margin: 12px 0 6px;
   font-size: 0.9rem;
   color: var(--muted);

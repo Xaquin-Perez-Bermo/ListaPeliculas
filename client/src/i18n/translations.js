@@ -20,7 +20,7 @@ export const translations = {
     searchButton: 'Buscar',
     searchingButton: 'Buscando...',
     infoButton: 'Info',
-    likeButton: 'Guardar en listas',
+    likeButton: 'Guardar...',
     savedButton: 'Guardada',
     close: 'Cerrar',
     saveMovieTitle: 'Guardar "{{title}}"',
