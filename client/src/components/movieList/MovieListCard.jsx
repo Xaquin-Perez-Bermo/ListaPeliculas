@@ -1,19 +1,18 @@
+import MovieCard from "../general/MovieCard";
 
-const MovieCard = ({ movie, currentUsername, t, tGenre, onOpenDetail, onToggleMovieVeto }) => {
+const MovieListCard = ({ movie, currentUsername, t, tGenre, onOpenDetail, onToggleMovieVeto }) => {
   return (
     <>
-      <li key={movie.id} className="movie-card" onClick={() => onOpenDetail(movie.id)} style={{ cursor: 'pointer' }}>
-        <div className="movie-main">
-          <strong className={movie.myRating ? 'watched-title' : ''}>
-            {movie.title} {movie.year ? `(${movie.year})` : `(${t('naLabel')})`}
-          </strong>
-          <div className="chip-row">
-            {movie.genres.map((genre) => (
-              <span key={`${movie.id}-${genre}`} className="chip">
-                {tGenre(genre)}
-              </span>
-            ))}
-          </div>
+      <MovieCard
+        key={movie.id}
+        movie={movie}
+        currentUsername={currentUsername}
+        t={t}
+        tGenre={tGenre}
+        onOpenDetail={onOpenDetail}
+        onToggleMovieVeto={onToggleMovieVeto}
+      >
+        <div>
           <p className="muted">
             {t('addedByLabel')} {movie.createdBy} | {t('avgRatingLabel')} {movie.avgRating || t('naLabel')}
           </p>
@@ -36,9 +35,9 @@ const MovieCard = ({ movie, currentUsername, t, tGenre, onOpenDetail, onToggleMo
               : t('addVetoButton')}
           </button>
         </div>
-      </li>
+      </MovieCard>
     </>
   )
 }
 
-export default MovieCard
+export default MovieListCard

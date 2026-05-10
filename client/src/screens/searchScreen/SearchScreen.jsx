@@ -150,8 +150,8 @@ function ExternalSearchSection({
 										}}
 										selectedSearchMovie={selectedSearchMovie}
 										streamingInfoData={streamingInfoDataById?.[streamingKey]}
-										hasSavedAnywhere={hasSavedAnywhere}
-									/>
+										hasSavedAnywhere={hasSavedAnywhere}>
+									</SearchMovieCard>
 								)
 							})}
 						</ul>
