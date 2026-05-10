@@ -1,7 +1,7 @@
 import ReactDOM from 'react-dom';
 import { useEffect } from 'react';
 
-const ModalContainer = ({ children, onClose, t }) => {
+const ModalContainer = ({ children, onClose, t, className = 'modal' }) => {
     //Cerrar con la tecla Escape
     useEffect(() => {
         const handleEsc = (e) => {
@@ -21,7 +21,7 @@ const ModalContainer = ({ children, onClose, t }) => {
                 aria-label={t('closePanelAria')}
                 title={t('closeByClickTitle')}
             />
-            <div className="modal">
+            <div className={className}>
                 {children}
             </div>
         </div>,

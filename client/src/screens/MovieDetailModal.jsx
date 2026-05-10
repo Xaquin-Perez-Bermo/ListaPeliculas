@@ -1,4 +1,5 @@
 import ModalContainer from "../components/general/ModalContainer"
+import CloseModalButton from "../components/general/CloseModalButton"
 
 /**
  * MovieDetailModal - Modal para mostrar detalles de película
@@ -19,13 +20,13 @@ export function MovieDetailModal({
   }
 
   return (
-    <ModalContainer onClose={onClose} t={t}>
-      <div className="modal large" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+    <ModalContainer onClose={onClose} t={t} className="modal large">
+      <div onClick={(e) => e.stopPropagation()}>
+        <div className="panel-head">
           <h3>
             {selectedMovie.title} {selectedMovie.year ? `(${selectedMovie.year})` : ''}
           </h3>
-          <button className="close-button" onClick={onClose}>×</button>
+          <CloseModalButton onClose={onClose} t={t} />
         </div>
 
         <div className="chip-row">

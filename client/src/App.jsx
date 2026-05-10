@@ -221,22 +221,19 @@ function App() {
           <main className="content">
             {screen === 'buscar' ? (
               <SearchScreen
-                searchMode={search.searchMode}
-                setSearchMode={search.setSearchMode}
                 discoverQuery={search.discoverQuery}
                 setDiscoverQuery={search.setDiscoverQuery}
                 discoverResults={search.discoverResults}
                 discoverError={search.discoverError}
                 handleDiscover={search.handleDiscover}
-                internalQuery={search.internalQuery}
-                setInternalQuery={search.setInternalQuery}
-                internalResults={search.internalResults}
                 selectedSearchMovie={search.selectedSearchMovie}
-                watchmodeData={search.watchmodeData}
-                watchmodeDataById={search.watchmodeDataById}
-                watchmodeLoading={search.watchmodeLoading}
-                watchmodeError={search.watchmodeError}
-                fetchWatchmodeData={search.fetchWatchmodeData}
+                streamingInfoData={search.streamingInfoData}
+                streamingInfoDataById={search.streamingInfoDataById}
+                streamingInfoLoading={search.streamingInfoLoading}
+                streamingInfoLoadingById={search.streamingInfoLoadingById}
+                streamingInfoError={search.streamingInfoError}
+                fetchStreamingInfo={search.fetchStreamingInfo}
+                fetchStreamingInfoForMovie={search.fetchStreamingInfoForMovie}
                 localLists={localLists}
                 onToggleInLocalList={handleToggleInLocalList}
                 getListsForMovie={getListsForMovie}

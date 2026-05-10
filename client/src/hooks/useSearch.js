@@ -16,72 +16,63 @@ export function useSearch(movies, logs) {
   const [discoverError, setDiscoverError] = useState('')
   const [internalQuery, setInternalQuery] = useState('')
   const [selectedSearchMovie, setSelectedSearchMovie] = useState(null)
-  const [watchmodeData, setWatchmodeData] = useState(null)
-  const [watchmodeDataById, setWatchmodeDataById] = useState({})
-  const [watchmodeLoading, setWatchmodeLoading] = useState(false)
-  const [watchmodeLoadingById, setWatchmodeLoadingById] = useState({})
-  const [watchmodeError, setWatchmodeError] = useState('')
+  const [streamingInfoData, setStreamingInfoData] = useState(null)
+  const [streamingInfoDataById, setStreamingInfoDataById] = useState({})
+  const [streamingInfoLoading, setStreamingInfoLoading] = useState(false)
+  const [streamingInfoLoadingById, setStreamingInfoLoadingById] = useState({})
+  const [streamingInfoError, setStreamingInfoError] = useState('')
   const [isSearching, setIsSearching] = useState(false)
 
-  const fetchWatchmodeDataForMovie = useCallback(async (movie) => {
+  const fetchStreamingInfoForMovie = useCallback(async (movie) => {
     const key = movie.externalId || `${movie.title}-${movie.year}`
     if (!key) {
       return null
     }
 
-    if (watchmodeDataById[key] !== undefined || watchmodeLoadingById[key]) {
-      return watchmodeDataById[key] || null
+    if (streamingInfoDataById[key] !== undefined || streamingInfoLoadingById[key]) {
+      return streamingInfoDataById[key] || null
     }
 
-    setWatchmodeLoadingById((prev) => ({
+    setStreamingInfoLoadingById((prev) => ({
       ...prev,
       [key]: true,
     }))
 
     try {
-      const data = await moviesAPI.getWatchmodeData(movie.title, movie.year)
-      setWatchmodeDataById((prev) => ({
+      const data = await moviesAPI.getStreamingInfo(movie.title, movie.year)
+      setStreamingInfoDataById((prev) => ({
         ...prev,
         [key]: data,
       }))
       return data
     } catch {
-      setWatchmodeDataById((prev) => ({
+      setStreamingInfoDataById((prev) => ({
         ...prev,
         [key]: null,
       }))
       return null
     } finally {
-      setWatchmodeLoadingById((prev) => ({
+      setStreamingInfoLoadingById((prev) => ({
         ...prev,
         [key]: false,
       }))
     }
-  }, [watchmodeDataById, watchmodeLoadingById])
+  }, [streamingInfoDataById, streamingInfoLoadingById])
 
   const handleDiscover = useCallback(async (event) => {
     event.preventDefault()
     setDiscoverError('')
     setDiscoverResults([])
     setSelectedSearchMovie(null)
-    setWatchmodeData(null)
-    setWatchmodeDataById({})
-    setWatchmodeLoadingById({})
-    setWatchmodeError('')
+    setStreamingInfoData(null)
+    setStreamingInfoDataById({})
+    setStreamingInfoLoadingById({})
+    setStreamingInfoError('')
     setIsSearching(true)
 
     try {
       const data = await moviesAPI.discover(discoverQuery)
       const normalizedResults = Array.isArray(data) ? data : []
-
-      // Precarga Watchmode al buscar para que el panel abra con datos listos.
-      if (normalizedResults.length > 0) {
-        await Promise.allSettled(
-          normalizedResults.map((movie) => fetchWatchmodeDataForMovie(movie)),
-        )
-      }
-
-      // Mostrar resultados solo cuando termina la precarga completa.
       setDiscoverResults(normalizedResults)
     } catch (error) {
       setDiscoverError(error.message)
@@ -89,22 +80,31 @@ export function useSearch(movies, logs) {
     } finally {
       setIsSearching(false)
     }
-  }, [discoverQuery, fetchWatchmodeDataForMovie])
+  }, [discoverQuery])
 
-  const fetchWatchmodeData = useCallback(async (movie) => {
+  const fetchStreamingInfo = useCallback(async (movie) => {
+    const key = movie.externalId || `${movie.title}-${movie.year}`
+    const cachedData = key ? streamingInfoDataById[key] : null
+
     setSelectedSearchMovie(movie)
-    setWatchmodeError('')
+    setStreamingInfoError('')
+    setStreamingInfoData(cachedData || null)
+
+    if (cachedData) {
+      setStreamingInfoLoading(false)
+      return
+    }
 
     try {
-      setWatchmodeLoading(true)
-      const data = await fetchWatchmodeDataForMovie(movie)
-      setWatchmodeData(data)
+      setStreamingInfoLoading(true)
+      const data = await fetchStreamingInfoForMovie(movie)
+      setStreamingInfoData(data)
     } catch (error) {
-      setWatchmodeError(error.message)
+      setStreamingInfoError(error.message)
     } finally {
-      setWatchmodeLoading(false)
+      setStreamingInfoLoading(false)
     }
-  }, [fetchWatchmodeDataForMovie])
+  }, [fetchStreamingInfoForMovie, streamingInfoDataById])
 
   const internalResults = {
     movies: filterMoviesByQuery(movies, internalQuery),
@@ -124,14 +124,14 @@ export function useSearch(movies, logs) {
     internalResults,
     selectedSearchMovie,
     setSelectedSearchMovie,
-    watchmodeData,
-    setWatchmodeData,
-    watchmodeDataById,
-    watchmodeLoading,
-    watchmodeLoadingById,
-    watchmodeError,
-    fetchWatchmodeData,
-    fetchWatchmodeDataForMovie,
+    streamingInfoData,
+    setStreamingInfoData,
+    streamingInfoDataById,
+    streamingInfoLoading,
+    streamingInfoLoadingById,
+    streamingInfoError,
+    fetchStreamingInfo,
+    fetchStreamingInfoForMovie,
     isSearching,
   }
 }

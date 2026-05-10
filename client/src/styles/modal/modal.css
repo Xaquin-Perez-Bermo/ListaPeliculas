@@ -12,8 +12,6 @@
 
 
 .modal-backdrop,
-.roulette-backdrop,
-.modal-backdrop,
 .like-selector-backdrop {
   position: absolute;
   inset: 0;
@@ -25,7 +23,6 @@
 }
 
 .modal,
-.roulette-modal,
 .like-selector-panel {
   position: relative;
   background: #fff;
@@ -48,15 +45,10 @@
   color: var(--ink);
 }
 
-.roulette-modal {
+.modal.roulette {
   width: min(560px, calc(100vw - 28px));
   max-height: calc(100vh - 28px);
   overflow: auto;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  position: absolute;
-  z-index: 1201;
 }
 
 .roulette-pointer {
@@ -76,39 +68,20 @@
 
 .modal.large {
   width: min(800px, calc(100vw - 28px));
+
+  .roulette-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
+  }
+
+  .roulette-result {
+    text-align: center;
+    margin-top: 8px;
+    font-weight: 600;
+  }
   max-height: calc(100vh - 28px);
   overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  color: var(--ink);
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: var(--muted);
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-}
-
-.close-button:hover {
-  background: var(--hover);
-  color: var(--ink);
 }

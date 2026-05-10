@@ -13,9 +13,7 @@
 .delete-list-btn,
 .list-delete-btn,
 .confirm-btn,
-.cancel-btn,
-.close-btn,
-.accept-btn {
+.cancel-btn {
   cursor: pointer;
 }
 

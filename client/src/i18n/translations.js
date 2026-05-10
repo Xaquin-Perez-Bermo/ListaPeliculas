@@ -47,13 +47,15 @@ export const translations = {
     listNamePlaceholder: 'Nombre de la lista...',
     deleteList: 'Eliminar lista "{{listName}}"',
 
-    watchmodeLoading: 'Cargando info de Watchmode...',
+    streamingInfoLoading: 'Cargando info de disponibilidad en streaming...',
     availableOn: 'Disponible en:',
     notStreaming: 'No disponible en streaming actualmente.',
     sourceRent: 'alquiler',
     sourceBuy: 'compra',
     saveFromInfo: 'Gestionar guardado',
     clickMovieToLoad: 'Pulsa en una pelicula para cargar datos.',
+  searchLoadMore: 'Ver más ({{shown}} de {{total}})',
+  criticScore: 'Crítica',
 
     randomPickButton: 'Seleccion aleatoria',
     hideVetoConfig: 'Ocultar vetos',
@@ -192,13 +194,15 @@ export const translations = {
     listNamePlaceholder: 'List name...',
     deleteList: 'Delete list "{{listName}}"',
 
-    watchmodeLoading: 'Loading Watchmode info...',
+    streamingInfoLoading: 'Loading streaming availability info...',
     availableOn: 'Available on:',
     notStreaming: 'Not currently available in streaming.',
     sourceRent: 'rent',
     sourceBuy: 'buy',
     saveFromInfo: 'Manage saved status',
     clickMovieToLoad: 'Click a movie to load details.',
+  searchLoadMore: 'Load more ({{shown}} of {{total}})',
+  criticScore: 'Critic score',
 
     randomPickButton: 'Random pick',
     hideVetoConfig: 'Hide veto config',

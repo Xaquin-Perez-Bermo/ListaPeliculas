@@ -1,5 +1,5 @@
 /**
- * ModalMovieInfo - Modal con info de la película de Watchmode
+ * ModalMovieInfo - Modal con info de disponibilidad en streaming de la película
  */
 import { useState } from 'react'
 import ListSelector from '../lists/ListSelector'
@@ -7,9 +7,9 @@ import CloseModalButton from '../../components/general/CloseModalButton'
 
 function ModalMovieInfo({
 	selectedSearchMovie,
-	watchmodeData,
-	watchmodeLoading,
-	watchmodeError,
+	streamingInfoData,
+	streamingInfoLoading,
+	streamingInfoError,
 	onClose,
 	localLists,
 	onToggleInLocalList,
@@ -37,55 +37,55 @@ function ModalMovieInfo({
 				<CloseModalButton onClose={onClose} t={t} />
 			</div>
 
-			{watchmodeLoading ? (
+			{streamingInfoLoading ? (
 				<div style={{ textAlign: 'center', padding: '20px' }}>
-					<p className="muted">⏳ {t('watchmodeLoading')}</p>
+					<p className="muted">⏳ {t('streamingInfoLoading')}</p>
 				</div>
 			) : null}
-			{watchmodeError ? <p className="error">{watchmodeError}</p> : null}
+			{streamingInfoError ? <p className="error">{streamingInfoError}</p> : null}
 
-			{watchmodeData ? (
+			{streamingInfoData ? (
 				<>
-					{watchmodeData.poster ? (
+					{streamingInfoData.poster ? (
 						<img
-							src={watchmodeData.poster}
-							alt={watchmodeData.title}
-							className="wm-poster"
+							src={streamingInfoData.poster}
+							alt={streamingInfoData.title}
+							className="movie-info-poster"
 						/>
 					) : null}
 
 					<div className="chip-row">
-						{(watchmodeData.genre_names || selectedSearchMovie.genres).map((genre) => (
-							<span key={`wm-${genre}`} className="chip">
+						{(streamingInfoData.genre_names || selectedSearchMovie.genres).map((genre) => (
+							<span key={`info-${genre}`} className="chip">
 								{tGenre(genre)}
 							</span>
 						))}
 					</div>
 
-					<div className="wm-meta">
-						{watchmodeData.runtime_minutes ? (
-							<span>⏱️ {watchmodeData.runtime_minutes} min</span>
+					<div className="movie-info-meta">
+						{streamingInfoData.runtime_minutes ? (
+							<span>⏱️ {streamingInfoData.runtime_minutes} min</span>
 						) : null}
-						{watchmodeData.us_rating ? (
-							<span className="chip">{watchmodeData.us_rating}</span>
+						{streamingInfoData.us_rating ? (
+							<span className="chip">{streamingInfoData.us_rating}</span>
 						) : null}
-						{watchmodeData.user_rating ? (
-							<span>⭐ {watchmodeData.user_rating}/10</span>
+						{streamingInfoData.user_rating ? (
+							<span>⭐ {streamingInfoData.user_rating}/10</span>
 						) : null}
-						{watchmodeData.critic_score ? (
-							<span>🎯 Crítica: {watchmodeData.critic_score}/100</span>
+						{streamingInfoData.critic_score ? (
+							<span>🎯 {t('criticScore')}: {streamingInfoData.critic_score}/100</span>
 						) : null}
 					</div>
 
-					{watchmodeData.plot_overview ? (
-						<p className="wm-plot">{watchmodeData.plot_overview}</p>
+					{streamingInfoData.plot_overview ? (
+						<p className="movie-info-plot">{streamingInfoData.plot_overview}</p>
 					) : null}
 
-					{watchmodeData.sources?.length ? (
+					{streamingInfoData.sources?.length ? (
 						<>
 							<h4>{t('availableOn')}</h4>
 							<div className="source-chips">
-								{[...new Map(watchmodeData.sources.map((s) => [s.name, s])).values()].map(
+								{[...new Map(streamingInfoData.sources.map((s) => [s.name, s])).values()].map(
 									(source) => {
 										let suffix = ''
 										if (source.type === 'rent') suffix = ` (${t('sourceRent')})`
@@ -111,7 +111,7 @@ function ModalMovieInfo({
 						<p className="muted">{t('notStreaming')}</p>
 					)}
 
-					<div className="wm-actions">
+					<div className="movie-info-actions">
 						<button
 							onClick={() => setShowListSelector(true)}
 							className={isSavedAnywhere ? 'saved' : ''}
@@ -140,7 +140,7 @@ function ModalMovieInfo({
 				</>
 			) : null}
 
-			{!watchmodeLoading && !watchmodeData && !watchmodeError ? (
+			{!streamingInfoLoading && !streamingInfoData && !streamingInfoError ? (
 				<p className="muted">{t('clickMovieToLoad')}</p>
 			) : null}
 		</>

@@ -81,9 +81,7 @@ button.close-modal-btn {
 }
 
 button.confirm-btn,
-button.cancel-btn,
-button.close-btn,
-button.accept-btn {
+button.cancel-btn {
   border: none;
   border-radius: 8px;
   font-size: 0.9rem;
@@ -91,26 +89,33 @@ button.accept-btn {
   transition: all 0.2s ease;
 }
 
-button.confirm-btn,
-button.accept-btn {
+button.confirm-btn {
   background: var(--accent);
   color: white;
 }
 
-button.confirm-btn:hover,
-button.accept-btn:hover {
+button.confirm-btn:hover {
   background: #0d6e68;
   box-shadow: 0 2px 8px rgba(20, 108, 103, 0.25);
 }
 
-button.cancel-btn,
-button.close-btn {
+button.cancel-btn {
   background: #f5f5f5;
   color: var(--ink);
   border: 1px solid var(--line);
 }
 
-button.cancel-btn:hover,
-button.close-btn:hover {
+button.cancel-btn:hover {
   background: #efefef;
+}
+
+@media (max-width: 640px) {
+  .inline-form {
+    flex-direction: column;
+  }
+
+  .inline-form input,
+  .inline-form button {
+    width: 100%;
+  }
 }

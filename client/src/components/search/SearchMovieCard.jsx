@@ -3,21 +3,21 @@ const SearchMovieCard = ({
   setLikeTargetMovie,
   t,
   tGenre,
-  fetchWatchmodeData,
+  fetchStreamingInfo,
   selectedSearchMovie,
   hasSavedAnywhere,
-  watchmodeData,
+  streamingInfoData,
 }) => {
   const isSelected = selectedSearchMovie?.externalId === movie.externalId;
-  const watchmodePlot = watchmodeData?.plot_overview || watchmodeData?.plot_overviews?.[0]?.body || '';
-  const watchmodeGenres = watchmodeData?.genre_names || [];
-  const moviePlot = movie.overview || watchmodePlot;
-  const movieGenres = movie.genres?.length ? movie.genres : watchmodeGenres;
-  const hasWatchmodeInfo = Boolean(moviePlot || movieGenres.length);
+  const infoPlot = streamingInfoData?.plot_overview || streamingInfoData?.plot_overviews?.[0]?.body || '';
+  const infoGenres = streamingInfoData?.genre_names || [];
+  const moviePlot = movie.overview || infoPlot;
+  const movieGenres = movie.genres?.length ? movie.genres : infoGenres;
+  const hasStreamingInfo = Boolean(moviePlot || movieGenres.length);
 
   // Manejador para la card completa
   const handleCardClick = () => {
-    fetchWatchmodeData(movie);
+    fetchStreamingInfo(movie);
   };
 
   // Manejador para teclado (Accesibilidad)
@@ -29,14 +29,14 @@ const SearchMovieCard = ({
   };
 
   return (
-    <li className={`movie-card search-card${isSelected ? ' card-selected' : ''}`}>
+    <li className={`movie-card${isSelected ? ' card-selected' : ''}`}>
       <article
-        className="search-card-hitbox"
+        className="search-card search-card-hitbox"
         onClick={handleCardClick}
         onKeyDown={handleKeyDown}
         role="button"
+        tabIndex={0}
         aria-label={t('openMovieInfoAria', { title: movie.title })}
-        style={{ cursor: 'pointer' }} 
       >
         {movie.posterUrl ? (
           <img src={movie.posterUrl} alt={movie.title} className="search-poster" />
@@ -49,7 +49,7 @@ const SearchMovieCard = ({
               <p className="muted">{movie.year || t('naLabel')}</p>
             </div>
 
-            {hasWatchmodeInfo && (
+            {hasStreamingInfo && (
               <div className="search-card-info">
                 {movieGenres.length > 0 && (
                   <div className="chip-row search-genre-row">
