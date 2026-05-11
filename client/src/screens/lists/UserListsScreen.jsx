@@ -2,7 +2,7 @@
  * MyListsScreen - Pantalla de listas locales
  */
 import { useState } from 'react'
-export function MyListsScreen({ localLists, onCreateList, onDeleteList, t }) {
+export function UserListsScreen({ localLists, onCreateList, onDeleteList,onOpenList, t }) {
   const [newListName, setNewListName] = useState('')
 
   const handleCreateList = (e) => {
@@ -19,7 +19,7 @@ export function MyListsScreen({ localLists, onCreateList, onDeleteList, t }) {
         {Object.entries(localLists).map(([listName, listMovies]) => {
           const canDeleteList = listName !== 'favoritas'
           return (
-            <article key={listName} className="subpanel">
+            <article key={listName} className="subpanel" style={{ cursor: 'pointer' }}  onClick={() => onOpenList(listName,listMovies)}>
               <div className="list-header">
                 <h3>{listName}</h3>
                 {canDeleteList ? (
@@ -33,23 +33,7 @@ export function MyListsScreen({ localLists, onCreateList, onDeleteList, t }) {
                   </button>
                 ) : null}
               </div>
-              <ul className="result-list">
-                {listMovies.length ? (
-                  listMovies.map((movie) => (
-                    <li
-                      key={`${listName}-${movie.externalId}`}
-                      className="movie-card compact"
-                    >
-                      <div className="movie-main">
-                        <strong>{movie.title}</strong>
-                        <p>{movie.year || t('naLabel')}</p>
-                      </div>
-                    </li>
-                  ))
-                ) : (
-                  <li className="muted">{t('emptyList')}</li>
-                )}
-              </ul>
+              <p className='muted'> {t('moviesInList', { count: listMovies.length })}</p>
             </article>
           )
         })}

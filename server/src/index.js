@@ -330,6 +330,25 @@ app.post('/api/movies/:id/veto', requireAuth, (req, res) => {
   return res.status(201).json({ ok: true });
 });
 
+app.delete('/api/movies/:id', requireAuth, (req, res) => {
+  const movieId = Number(req.params.id);
+
+  const movie = get(`SELECT id, title FROM movies WHERE id = ?`, [movieId]);
+
+  if (!movie) {
+    return res.status(404).json({ error: 'Pelicula no encontrada' });
+  }
+
+  run(
+    `DELETE FROM movie_vetoes WHERE user_id = ? AND movie_id = ?`,
+    [req.user.id, movieId]
+  );
+
+  logAction('movie_vetoed', { movieId, title: movie.title }, req.user.id);
+
+  return res.status(201).json({ ok: true });
+});
+
 app.delete('/api/movies/:id/veto', requireAuth, (req, res) => {
   const movieId = Number(req.params.id);
 

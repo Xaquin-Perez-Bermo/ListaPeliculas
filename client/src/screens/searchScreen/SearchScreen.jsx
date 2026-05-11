@@ -38,8 +38,7 @@ export function SearchScreen({ search, lists, listActions, i18n }) {
 	const {
 		onToggleInLocalList,
 		onCreateList,
-		onDeleteList,
-		onAddToSharedList,
+		onAddToList,
 	} = listActions
 
 	const [likeTargetMovie, setLikeTargetMovie] = useState(null)
@@ -134,8 +133,7 @@ export function SearchScreen({ search, lists, listActions, i18n }) {
 			isMovieSaved,
 			isInSharedList,
 			onCreateList,
-			onDeleteList,
-			onAddToSharedList,
+			onAddToList,
 			t,
 			tGenre,
 		}),
@@ -160,8 +158,7 @@ export function SearchScreen({ search, lists, listActions, i18n }) {
 			isMovieSaved,
 			isInSharedList,
 			onCreateList,
-			onDeleteList,
-			onAddToSharedList,
+			onAddToList,
 			t,
 			tGenre,
 		],
@@ -250,9 +247,8 @@ export function SearchScreen({ search, lists, listActions, i18n }) {
 										onToggleInLocalList(listName, likeTargetMovie)
 									}}
 									onCreateList={onCreateList}
-									onDeleteList={onDeleteList}
-									onAddToSharedList={() => {
-										onAddToSharedList(likeTargetMovie)
+									onAddToList={() => {
+										onAddToList(likeTargetMovie)
 									}}
 									t={t}
 								/>

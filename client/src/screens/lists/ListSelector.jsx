@@ -10,8 +10,7 @@ function ListSelector({
   isInSharedList,
   onToggleInList,
   onCreateList,
-  onDeleteList,
-  onAddToSharedList,
+  onAddToList,
   t,
 }) {
   const [newListName, setNewListName] = useState('')
@@ -37,19 +36,8 @@ function ListSelector({
       <h4>{t('saveIn')}</h4>
 
       <div className="lists-container">
-        {/* Shared list */}
-        <button
-          className={`list-option ${isInSharedList ? 'saved' : ''}`}
-          onClick={() => onAddToSharedList()}
-          title={t('addToShared')}
-          type="button"
-        >
-          📋 {isInSharedList ? t('alreadyInShared') : t('sharedList')}
-        </button>
-
         {/* Local lists */}
         {Object.keys(localLists).map((listName) => {
-          const isDeletable = listName !== 'favoritas'
           const isSaved = selectedSet.has(listName)
 
           return (
@@ -63,16 +51,6 @@ function ListSelector({
                 {listName === 'favoritas' ? '⭐' : '📝'} {listName} ·{' '}
                 {isSaved ? t('removeFromList') : t('addToList')}
               </button>
-              {isDeletable ? (
-                <button
-                  className="list-delete-btn"
-                  onClick={() => onDeleteList(listName)}
-                  title={t('deleteList', { listName })}
-                  type="button"
-                >
-                  ✕
-                </button>
-              ) : null}
             </div>
           )
         })}

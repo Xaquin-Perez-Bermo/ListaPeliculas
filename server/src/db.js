@@ -14,6 +14,19 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS lists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  users_subscribed INTEGER NOT NULL,
+  movie_id INTEGER NOT NULL,
+  created_by INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  unique(name, users_subscribed),
+  FOREIGN KEY (created_by) REFERENCES users(id),
+  FOREIGN KEY (users_subscribed) REFERENCES users(id),
+  FOREIGN KEY (movie_id) REFERENCES movies(id)
+);
+
 CREATE TABLE IF NOT EXISTS movies (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   external_id TEXT UNIQUE NOT NULL,
@@ -40,19 +53,23 @@ CREATE TABLE IF NOT EXISTS movie_vetoes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
   movie_id INTEGER NOT NULL,
+  list_id INTEGER NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(user_id, movie_id),
+  UNIQUE(user_id, movie_id, list_id),
   FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (movie_id) REFERENCES movies(id)
+  FOREIGN KEY (movie_id) REFERENCES movies(id),
+  FOREIGN KEY (list_id) REFERENCES lists(id)
 );
 
 CREATE TABLE IF NOT EXISTS genre_vetoes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
+  list_id INTEGER NOT NULL,
   genre TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(user_id, genre),
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  UNIQUE(user_id, list_id, genre),
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (list_id) REFERENCES lists(id)
 );
 
 CREATE TABLE IF NOT EXISTS ratings (

@@ -76,6 +76,11 @@ export const moviesAPI = {
       body: JSON.stringify(movie),
     }),
 
+  remove: (id) =>
+    apiCall(`/api/movies/${id}`, {
+      method: 'DELETE',
+    }),
+
   veto: (id) =>
     apiCall(`/api/movies/${id}/veto`, {
       method: 'POST',
