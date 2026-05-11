@@ -4,6 +4,7 @@
 
 export function mapMovieToLocal(movie) {
   return {
+    id: movie.id,
     externalId: movie.externalId,
     title: movie.title,
     year: movie.year,
