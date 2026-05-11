@@ -36,6 +36,16 @@ CREATE TABLE IF NOT EXISTS movies (
   FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS list_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  list_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(list_id, user_id),
+  FOREIGN KEY (list_id) REFERENCES lists(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS list_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   list_id INTEGER NOT NULL,

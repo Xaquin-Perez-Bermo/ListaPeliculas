@@ -69,6 +69,24 @@ export const listsAPI = {
       method: 'POST',
       body: JSON.stringify({ name }),
     }),
+  delete: (listId) =>
+    apiCall(`/api/lists/${listId}`, {
+      method: 'DELETE',
+    }),
+  getAll: () => apiCall('/api/lists'),
+  getListById: (listId) => apiCall(`/api/lists/id/${listId}`),
+  getListByName: (listName) => apiCall(`/api/lists/name/${listName}`),
+  getMovies: (listId) => apiCall(`/api/lists/${listId}/movies`),
+  addMovieToList: (listId, movieId) =>
+    apiCall(`/api/lists/${listId}/add-movie`, {
+      method: 'POST',
+      body: JSON.stringify({ id: movieId }),
+    }),
+  removeMovieFromList: (listId, movieId) =>
+    apiCall(`/api/lists/${listId}/remove-movie`, {
+      method: 'POST',
+      body: JSON.stringify({ id: movieId }),
+    }),
 }
 
 // Movies endpoints
@@ -77,6 +95,8 @@ export const moviesAPI = {
     apiCall(`/api/movies?status=${status}&genre=${encodeURIComponent(genre)}`),
 
   getById: (id) => apiCall(`/api/movies/${id}`),
+
+  getByExternalId: (externalId) => apiCall(`/api/movies/external/${encodeURIComponent(externalId)}`),
 
   create: (movie) =>
     apiCall('/api/movies', {
@@ -127,6 +147,7 @@ export const moviesAPI = {
       method: 'DELETE',
     }),
 }
+
 
 // Genre veto endpoints
 export const genreVetoAPI = {

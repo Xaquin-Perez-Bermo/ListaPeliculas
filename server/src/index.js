@@ -254,6 +254,19 @@ app.get('/api/movies', requireAuth, async (req, res) => {
   return res.json(movies);
 });
 
+//Obtener pelicula por externalId
+app.get('/api/movies/external/:externalId', requireAuth, (req, res) => {
+  const externalId = String(req.params.externalId || '').trim();
+
+  const movie = get(`SELECT * FROM movies WHERE external_id = ?`, [externalId]);
+
+  if (!movie) {
+    return res.status(404).json({ error: 'Película no encontrada' });
+  }
+
+  return res.json(movie);
+});
+
 app.post('/api/movies', requireAuth, async (req, res) => {
   const title = String(req.body.title || '').trim();
   const externalId = String(req.body.externalId || '').trim();
@@ -338,6 +351,7 @@ app.post('/api/movies', requireAuth, async (req, res) => {
   });
 });
 
+//Creamos una lista y añadimos al usuario que la creeo a su lista
 app.post('/api/lists', requireAuth, (req, res) => {
   const name = String(req.body.name || '').trim();
 
@@ -350,11 +364,103 @@ app.post('/api/lists', requireAuth, (req, res) => {
     return res.status(409).json({ error: 'Ya existe una lista con ese nombre para este usuario' });
   }
 
-  const insert = run(`INSERT INTO lists (name, created_by) VALUES (?, ?)`, [name, req.user.id]);
+  // Definimos la transacción
+  // 'db' es tu instancia de better-sqlite3
+  const createListTransaction = db.transaction((listName, userId) => {
+    // Se ejecuta dentro de un BEGIN
+    const insert = run(`INSERT INTO lists (name, created_by) VALUES (?, ?)`, [listName, userId]);
+    const listId = insert.lastInsertRowid;
 
-  logAction('list_created', { listId: insert.lastInsertRowid, name }, req.user.id);
+    run(`INSERT INTO list_members (list_id, user_id) VALUES (?, ?)`, [listId, userId]);
+    
+    return listId;
+  }); // Si hay un throw dentro, hace ROLLBACK. Si termina, hace COMMIT.
 
-  return res.status(201).json({ id: insert.lastInsertRowid, name });
+  try {
+    // Ejecutamos la transacción
+    const newListId = createListTransaction(name, req.user.id);
+
+    // Los logs los dejamos fuera de la transacción si son a sistemas externos (archivos, otra API)
+    // Si logAction escribe en SQLite, podrías meterlo dentro de la transacción de arriba.
+    logAction('list_created', { listId: newListId, name }, req.user.id);
+    logAction('list_member_added', { listId: newListId, userId: req.user.id }, req.user.id);
+
+    return res.status(201).json({ id: newListId, name });
+    
+  } catch (error) {
+    console.error('Error en la transacción:', error);
+    return res.status(500).json({ error: 'Error al procesar la solicitud' });
+  }
+});
+
+//Eliminamos una lista y todas sus asociaciones
+app.delete('/api/lists/:listId', requireAuth, (req, res) => {
+  const listId = Number(req.params.listId);
+  const list = get(`SELECT id, name FROM lists WHERE id = ? AND created_by = ?`, [listId, req.user.id]);
+  if (!list) {
+    return res.status(404).json({ error: 'Lista no encontrada' });
+  }
+
+  run(`DELETE FROM list_entries WHERE list_id = ?`, [listId]);
+  run(`DELETE FROM list_members WHERE list_id = ?`, [listId]);
+
+  run(`DELETE FROM lists WHERE id = ?`, [listId]);
+
+  logAction('list_deleted', { listId, name: list.name }, req.user.id);
+
+  return res.json({ ok: true });
+});
+
+// Obtener todas las listas del usuario
+app.get('/api/lists', requireAuth, (req, res) => {
+
+ const lists = get(`SELECT * FROM lists WHERE created_by = ?`, [req.user.id]);
+
+  return res.status(200).json(lists);
+});
+
+// Obtener una lista por id (solo si el usuario es miembro)
+app.get('/api/lists/id/:listId', requireAuth, (req, res) => {
+  const listId = Number(req.params.listId);
+  const list = get(`SELECT * FROM lists WHERE id = ? AND created_by = ?`, [listId, req.user.id]);
+  if (!list) {
+    return res.status(404).json({ error: 'Lista no encontrada' });
+  }
+  return res.status(200).json(list);
+});
+
+// Obtener una lista por nombre (solo si el usuario es miembro)
+app.get('/api/lists/name/:listName', requireAuth, (req, res) => {
+  const listName = String(req.params.listName || '').trim();
+  const list = get(`SELECT * FROM lists WHERE name = ? AND created_by = ?`, [listName, req.user.id]);
+  if (!list) {
+    return res.status(404).json({ error: 'Lista no encontrada' });
+  }
+  return res.status(200).json(list);
+});
+
+// Obtener peliculas de una lista
+app.get('/api/lists/:listId/movies', requireAuth, (req, res) => {
+
+ const movies = get(`SELECT m.* FROM movies m JOIN list_entries le ON m.id = le.movie_id WHERE le.list_id = ?`, [req.params.listId]);
+
+  return res.status(200).json(movies);
+});
+
+//Añadir una pelicula a una lista
+app.post('/api/lists/:listId/add-movie', requireAuth, (req, res) => {
+  const listId = Number(req.params.listId);
+  const movieId = Number(req.body.id);
+  run(`INSERT INTO list_entries (list_id, movie_id, added_by) VALUES (?, ?, ?) ON CONFLICT(list_id, movie_id) DO NOTHING`, [listId, movieId, req.user.id]);
+  return res.status(201).json({ ok: true });
+});
+
+//Eliminar una pelicula de una lista
+app.post('/api/lists/:listId/remove-movie', requireAuth, (req, res) => {
+  const listId = Number(req.params.listId);
+  const movieId = Number(req.body.id);
+  run(`DELETE FROM list_entries WHERE list_id = ? AND movie_id = ?`, [listId, movieId]);
+  return res.json({ ok: true });
 });
 
 app.post('/api/movies/:id/veto', requireAuth, (req, res) => {

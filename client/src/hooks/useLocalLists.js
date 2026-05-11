@@ -1,5 +1,5 @@
 /**
- * useLocalLists Hook - Maneja listas locales en localStorage
+ * useLocalLists Hook - Maneja listas locales
  */
 
 import { useState, useEffect } from 'react'
@@ -8,91 +8,108 @@ import { getToken, moviesAPI, listsAPI } from '../services/api'
 import { mapMovieToLocal } from '../utils/movieUtils'
 
 export function useLocalLists() {
-  const [localLists, setLocalLists] = useState(() => loadLocalLists())
+  const [localLists, setSelectedLists] = useState(() => loadLocalLists())
 
   // Sync with localStorage whenever lists change
   useEffect(() => {
     saveLocalLists(localLists)
   }, [localLists])
 
-  const addToLocalList = (listName, movie) => {
-    const mappedMovie = mapMovieToLocal(movie)
+  const addToSelectedList = (listName, movie) => {
+    const token = getToken()
 
-    setLocalLists((prev) => {
-      // Create list if it doesn't exist
-      if (!prev[listName]) {
-        return {
-          ...prev,
-          [listName]: [mappedMovie],
+    if (token) {
+      (async () => {
+        try {
+          let lists = await listsAPI.getAll();
+          let selectedList = lists.find(l => l.name === listName);
+          if (!selectedList) {
+            // Create the list if it doesn't exist
+            try {
+              const newList = await listsAPI.create({ name: listName });
+              selectedList = newList;
+            } catch (error) {
+              console.error('Error creating list:', error);
+            }
+            try {
+              const movie = await moviesAPI.getByExternalId(movie.externalId)
+              if (!movie) {
+
+                const payload = {
+                  title: movie.title,
+                  externalId: movie.externalId,
+                  year: movie.year,
+                  posterUrl: movie.posterUrl,
+                  genres: movie.genres,
+                  overview: movie.overview,
+                }
+
+                const needsGenres = !payload.genres || (Array.isArray(payload.genres) && payload.genres.length === 0) || String(payload.genres || '').trim() === ''
+                const needsOverview = !payload.overview || String(payload.overview || '').trim() === ''
+
+                if ((needsGenres || needsOverview) && movie.title) {
+                  try {
+                    const info = await moviesAPI.getStreamingInfo(movie.title, movie.year)
+                    if (info) {
+                      if (needsGenres && Array.isArray(info.genre_names) && info.genre_names.length) {
+                        payload.genres = info.genre_names
+                      }
+                      if (needsOverview && info.plot_overview) {
+                        payload.overview = info.plot_overview
+                      }
+                      if (!payload.posterUrl && info.poster) {
+                        payload.posterUrl = info.poster
+                      }
+                    }
+                  } catch (_) {
+                    // ignore provider errors
+                  }
+                }
+                const movie = await moviesAPI.create(payload);
+
+              }
+            }
+            catch (error) {
+              console.error('Error al obtener la película:', error);
+            }
+            await listsAPI.addMovieToList(selectedList.id, movie.id);
+          }
+        } catch (error) {
+          console.error('Error fetching lists:', error);
         }
-      }
+      })()
+    }
 
-      const exists = prev[listName].some((item) => item.externalId === mappedMovie.externalId)
-      if (exists) return prev
-
+    // Create list if it doesn't exist
+    if (!prev[listName]) {
       return {
         ...prev,
-        [listName]: [mappedMovie, ...prev[listName]],
+        [listName]: [mappedMovie],
       }
-    })
-    // Persist to server if authenticated (background). Enrich with streamingInfo when missing.
-    try {
-      const token = getToken()
-      if (token) {
-        (async () => {
-          const payload = {
-            title: movie.title,
-            externalId: movie.externalId,
-            year: movie.year,
-            posterUrl: movie.posterUrl,
-            genres: movie.genres,
-            overview: movie.overview,
-          }
+    }
 
-          const needsGenres = !payload.genres || (Array.isArray(payload.genres) && payload.genres.length === 0) || String(payload.genres || '').trim() === ''
-          const needsOverview = !payload.overview || String(payload.overview || '').trim() === ''
+    const exists = prev[listName].some((item) => item.externalId === mappedMovie.externalId)
+    if (exists) return prev
 
-          if ((needsGenres || needsOverview) && movie.title) {
-            try {
-              const info = await moviesAPI.getStreamingInfo(movie.title, movie.year)
-              if (info) {
-                if (needsGenres && Array.isArray(info.genre_names) && info.genre_names.length) {
-                  payload.genres = info.genre_names
-                }
-                if (needsOverview && info.plot_overview) {
-                  payload.overview = info.plot_overview
-                }
-                if (!payload.posterUrl && info.poster) {
-                  payload.posterUrl = info.poster
-                }
-              }
-            } catch (_) {
-              // ignore provider errors
-            }
-          }
-
-          try {
-            await moviesAPI.create(payload)
-          } catch (_) {
-            // ignore network errors
-          }
-        })()
-      }
-    } catch {}
+    return {
+      ...prev,
+      [listName]: [mappedMovie, ...prev[listName]],
+    }
   }
 
-  const removeFromLocalList = (listName, externalId) => {
-    setLocalLists((prev) => ({
+
+  const removeFromSelectedList = (listName, movieId) => {
+    setSelectedLists((prev) => ({
       ...prev,
-      [listName]: (prev[listName] || []).filter((m) => m.externalId !== externalId),
+      [listName]: (prev[listName] || []).filter((m) => m.movieId !== movieId),
     }))
     // Persist removal to server if authenticated (background)
     try {
       const token = getToken()
       if (token) {
-        moviesAPI.removeByExternal(externalId).catch(() => {})
+        listsAPI.removeMovieFromList(listName, movieId).catch(() => { })
       }
-    } catch {}
+    } catch { }
   }
 
   const getListsForMovie = (externalId) => {
@@ -105,18 +122,23 @@ export function useLocalLists() {
 
   const isMovieSaved = (externalId) => getListsForMovie(externalId).length > 0
 
+
+  // Si ya está en la lista, lo quita; si no, lo añade
   const toggleMovieInLocalList = (listName, movie) => {
     const mappedMovie = mapMovieToLocal(movie)
 
-    setLocalLists((prev) => {
+    setSelectedLists((prev) => {
       const currentList = prev[listName] || []
-      const exists = currentList.some((item) => item.externalId === mappedMovie.externalId)
+      const exists = currentList.some((item) => item.externalId === mappedMovie.id)
 
       if (exists) {
+        removeFromSelectedList(listName, mappedMovie.id)
         return {
           ...prev,
-          [listName]: currentList.filter((item) => item.externalId !== mappedMovie.externalId),
+          [listName]: currentList.filter((item) => item.externalId !== mappedMovie.id),
         }
+      } else {
+        addToSelectedList(listName, movie)
       }
 
       return {
@@ -124,62 +146,21 @@ export function useLocalLists() {
         [listName]: [mappedMovie, ...currentList],
       }
     })
-    // If we just added the movie (not removed), persist similarly to addToLocalList
-    try {
-      const token = getToken()
-      if (token) {
-        (async () => {
-          const payload = {
-            title: movie.title,
-            externalId: movie.externalId,
-            year: movie.year,
-            posterUrl: movie.posterUrl,
-            genres: movie.genres,
-            overview: movie.overview,
-          }
-
-          const needsGenres = !payload.genres || (Array.isArray(payload.genres) && payload.genres.length === 0) || String(payload.genres || '').trim() === ''
-          const needsOverview = !payload.overview || String(payload.overview || '').trim() === ''
-
-          if ((needsGenres || needsOverview) && movie.title) {
-            try {
-              const info = await moviesAPI.getStreamingInfo(movie.title, movie.year)
-              if (info) {
-                if (needsGenres && Array.isArray(info.genre_names) && info.genre_names.length) {
-                  payload.genres = info.genre_names
-                }
-                if (needsOverview && info.plot_overview) {
-                  payload.overview = info.plot_overview
-                }
-                if (!payload.posterUrl && info.poster) {
-                  payload.posterUrl = info.poster
-                }
-              }
-            } catch (_) {
-              // ignore provider errors
-            }
-          }
-
-          try {
-            await moviesAPI.create(payload)
-          } catch (_) {
-            // ignore network errors
-          }
-        })()
-      }
-    } catch {}
   }
 
   const createList = (listName) => {
     if (!listName.trim() || listName === 'favoritas') return false
-    // Try to create server-side list when authenticated (fire-and-forget)
-    try {
-      const token = getToken()
-      if (token) {
-        listsAPI.create(listName).catch(() => {})
-      }
-    } catch {}
-    setLocalLists((prev) => {
+    const token = getToken()
+    if (token) {
+      (async () => {
+        try {
+          await listsAPI.create(listName.trim())
+        } catch (error) {
+          console.error('Error creating list:', error);
+        }
+      })()
+    }
+    setSelectedLists((prev) => {
       if (prev[listName]) return prev
       return {
         ...prev,
@@ -192,23 +173,39 @@ export function useLocalLists() {
   const deleteList = (listName) => {
     // Never allow deleting 'favoritas'
     if (listName === 'favoritas') return false
-    
-    setLocalLists((prev) => {
+
+    const token = getToken();
+    if (token) {
+      (async () => {
+        try {
+          const list = awaitlistsAPI.getListByName(listName).catch(() => null)
+          if (list) {
+            listsAPI.delete(list.id).catch(() => { })
+          }
+        } catch (error) {
+          console.error('Error creating list:', error);
+        }
+      })()
+    }
+
+    setSelectedLists((prev) => {
       const next = { ...prev }
       delete next[listName]
       return next
     })
+
     return true
   }
 
   return {
     localLists,
-    addToLocalList,
-    removeFromLocalList,
+    addToLocalList: addToSelectedList,
+    removeFromLocalList: removeFromSelectedList,
     toggleMovieInLocalList,
     getListsForMovie,
     isMovieSaved,
     createList,
     deleteList,
   }
+
 }
