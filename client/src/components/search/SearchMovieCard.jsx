@@ -1,37 +1,24 @@
 import MovieCard from "../general/MovieCard";
+import PropTypes from 'prop-types';
+import { useSearchScreenContext } from "../../screens/searchScreen/SearchScreenContext";
 
 const SearchMovieCard = ({
     movie,
-    t,
-    tGenre,
     setLikeTargetMovie,
-    fetchStreamingInfo,
-    selectedSearchMovie,
-    hasSavedAnywhere ,
+    onSelectMovie,
     streamingInfoData,
-    children,
-    // Props opcionales con valores por defecto
-    className = '',
 }) => {
-    const isSelected = selectedSearchMovie?.externalId === movie.externalId;
-    const infoPlot = streamingInfoData?.plot_overview || streamingInfoData?.plot_overviews?.[0]?.body || '';
-    const infoGenres = streamingInfoData?.genre_names || [];
-    const moviePlot = movie.overview || infoPlot;
-    const movieGenres = movie.genres?.length ? movie.genres : infoGenres;
-    const hasStreamingInfo = Boolean(moviePlot || movieGenres.length);
+    const {
+        t,
+        tGenre,
+        selectedSearchMovie,
+        isInSharedList,
+        getListsForMovie,
+    } = useSearchScreenContext();
 
-    // Manejador para la card completa
-    const handleCardClick = () => {
-        fetchStreamingInfo(movie); // Si no se pasa prop, ejecutará () => {} sin romper nada
-    };
-
-    // Manejador para teclado (Accesibilidad)
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleCardClick();
-        }
-    };
+    const savedInLists = getListsForMovie(movie.externalId);
+    const hasSavedLocal = savedInLists.length > 0;
+    const hasSavedAnywhere = hasSavedLocal || isInSharedList(movie.externalId);
 
     return (
 
@@ -41,7 +28,7 @@ const SearchMovieCard = ({
             setLikeTargetMovie={setLikeTargetMovie}
             t={t}
             tGenre={tGenre}
-            fetchStreamingInfo={fetchStreamingInfo}
+            fetchStreamingInfo={onSelectMovie}
             selectedSearchMovie={selectedSearchMovie}
             streamingInfoData={streamingInfoData}
             hasSavedAnywhere={hasSavedAnywhere}>
@@ -60,6 +47,17 @@ const SearchMovieCard = ({
             </div>
         </MovieCard>
     );
+};
+
+SearchMovieCard.propTypes = {
+    movie: PropTypes.shape({
+        externalId: PropTypes.string,
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        title: PropTypes.string,
+    }).isRequired,
+    setLikeTargetMovie: PropTypes.func.isRequired,
+    onSelectMovie: PropTypes.func.isRequired,
+    streamingInfoData: PropTypes.object,
 };
 
 export default SearchMovieCard;
