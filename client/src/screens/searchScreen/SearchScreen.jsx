@@ -202,11 +202,10 @@ function ExternalSearchSection({
 					{likeTargetMovie ? (
 						<ModalContainer onClose={() => setLikeTargetMovie(null)} t={t}>
 							<ListSelector
-								likeTargetMovie={likeTargetMovie}
 								localLists={localLists}
-								getListsForMovie={getListsForMovie}
-								isInSharedList={isInSharedList}
-								onToggleInLocalList={onToggleInLocalList}
+								selectedListNames={getListsForMovie(likeTargetMovie.externalId)}
+								isInSharedList={isInSharedList(likeTargetMovie.externalId )}
+								onToggleInList={onToggleInLocalList}
 								onCreateList={onCreateList}
 								onDeleteList={onDeleteList}
 								onAddToSharedList={onAddToSharedList}
