@@ -75,8 +75,7 @@ function renderModalBody({
 	isInSharedList,
 	onToggleInLocalList,
 	onCreateList,
-	onDeleteList,
-	onAddToSharedList,
+	onAddToList,
 	shouldShowEmptyState,
 }) {
 	return (
@@ -133,9 +132,8 @@ function renderModalBody({
 								onToggleInLocalList(listName, selectedSearchMovie)
 							}}
 							onCreateList={onCreateList}
-							onDeleteList={onDeleteList}
-							onAddToSharedList={() => {
-								onAddToSharedList(selectedSearchMovie)
+							onAddToList={() => {
+								onAddToList(selectedSearchMovie)
 							}}
 							t={t}
 						/>
@@ -164,8 +162,7 @@ function ModalMovieInfo({
 		isMovieSaved,
 		isInSharedList,
 		onCreateList,
-		onDeleteList,
-		onAddToSharedList,
+		onAddToList,
 		t,
 		tGenre,
 	} = useSearchScreenContext()
@@ -206,8 +203,7 @@ function ModalMovieInfo({
 				isInSharedList,
 				onToggleInLocalList,
 				onCreateList,
-				onDeleteList,
-				onAddToSharedList,
+				onAddToList,
 				shouldShowEmptyState,
 			})}
 		</>

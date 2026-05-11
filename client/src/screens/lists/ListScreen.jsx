@@ -1,13 +1,11 @@
-/**
- * SharedListScreen - Pantalla de lista conjunta
- */
 import { useState, useEffect } from 'react'
 import { RandomRouletteModal } from '../RandomRouletteModal'
 import MovieCard from '../../components/movieList/MovieListCard'
 import MovieListCard from '../../components/movieList/MovieListCard'
 
-export function SharedListScreen({
+export function ListScreen({
   movies,
+  listName,
   statusFilter,
   setStatusFilter,
   showVetoConfig,
@@ -50,7 +48,7 @@ export function SharedListScreen({
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>{t('tabShared')}</h2>
+        <h2>{listName}</h2>
         <div className="inline">
           <button onClick={() => setShowRoulette(true)}>{t('randomPickButton')}</button>
           <button
@@ -141,7 +139,7 @@ export function SharedListScreen({
       <ul className="result-list">
         {filteredMovies.map((movie) => (
           <MovieListCard
-            key={movie.id}
+            key={movie.externalId}
             movie={movie}
             currentUsername={currentUsername}
             t={t}

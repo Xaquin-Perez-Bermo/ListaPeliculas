@@ -2,8 +2,8 @@ import { useMemo, useState, useEffect } from 'react'
 import { useAuth, useMovies, useSearch, useLocalLists, useNavigation } from './hooks'
 import { AuthScreen } from './screens/AuthScreen'
 import { SearchScreen } from './screens/searchScreen/SearchScreen'
-import { SharedListScreen } from './screens/lists/SharedListScreen'
-import { MyListsScreen } from './screens/lists/MyListsScreen'
+import { ListScreen } from './screens/lists/ListScreen'
+import { UserListsScreen } from './screens/lists/UserListsScreen'
 import { MovieDetailModal } from './screens/MovieDetailModal'
 import { WatchedMoviesScreen } from './screens/WatchedMoviesScreen'
 import { ActivityScreen } from './screens/ActivityScreen'
@@ -39,6 +39,8 @@ function App() {
   // Rating inputs for the detail screen
   const [ratingInputs, setRatingInputs] = useState({})
 
+  const [selectedListName, setSelectedListName] = useState(null)
+  const [selectedMovieList, setSelectedMovieList] = useState(null)
 
   // UI state for shared list screen
   const [showVetoConfig, setShowVetoConfig] = useState(() => {
@@ -161,6 +163,13 @@ function App() {
     }
   }
 
+  const handleOpenList = (listName, movies) => {
+    setSelectedListName(listName)
+    setSelectedMovieList(movies)
+    console.log(movies)
+    setScreen('list')
+  }
+
   // Memoized values
   const groupedGenreVetoes = useMemo(
     () => groupGenreVetoesByGenre(movies.genreVetoes),
@@ -169,9 +178,8 @@ function App() {
 
   const navItems = [
     { id: 'buscar', label: t('tabSearch') },
-    { id: 'lista', label: t('tabShared') },
     { id: 'vistas', label: t('tabWatched') },
-    { id: 'mis-listas', label: t('tabMyLists') },
+    { id: 'lists', label: t('lists') },
     { id: 'actividad', label: t('tabActivity') },
   ]
 
@@ -232,15 +240,16 @@ function App() {
                   onToggleInLocalList: handleToggleInLocalList,
                   onCreateList: createList,
                   onDeleteList: deleteList,
-                  onAddToSharedList: handleAddToSharedList,
+                  onAddToList: handleAddToSharedList,
                 }}
                 i18n={{ t, tGenre }}
               />
             ) : null}
 
-            {screen === 'lista' ? (
-              <SharedListScreen
-                movies={movies.movies}
+            {screen === 'list' ? (
+              <ListScreen
+                movies={selectedMovieList || []}
+                listName={selectedListName}
                 statusFilter={movies.statusFilter}
                 setStatusFilter={movies.setStatusFilter}
                 showVetoConfig={showVetoConfig}
@@ -258,11 +267,12 @@ function App() {
               />
             ) : null}
 
-            {screen === 'mis-listas' ? (
-              <MyListsScreen
+            {screen === 'lists' ? (
+              <UserListsScreen
                 localLists={localLists}
                 onCreateList={createList}
                 onDeleteList={deleteList}
+                onOpenList={handleOpenList}
                 t={t}
               />
             ) : null}

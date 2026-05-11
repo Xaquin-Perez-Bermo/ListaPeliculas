@@ -129,6 +129,17 @@ export function useMovies(token) {
     }
   }
 
+  const removeMovie = async (movie) => {
+    try {
+      await moviesAPI.remove(movie.id)
+      await loadData()
+      return true
+    } catch (err) {
+      setError(err.message)
+      return false
+    }
+  }
+
   const addGenreVeto = async (genre) => {
     try {
       await genreVetoAPI.add(genre)
