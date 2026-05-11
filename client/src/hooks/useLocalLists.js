@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { loadLocalLists, saveLocalLists } from '../services/localStorage'
+import { getToken, moviesAPI, listsAPI } from '../services/api'
 import { mapMovieToLocal } from '../utils/movieUtils'
 
 export function useLocalLists() {
@@ -34,6 +35,50 @@ export function useLocalLists() {
         [listName]: [mappedMovie, ...prev[listName]],
       }
     })
+    // Persist to server if authenticated (background). Enrich with streamingInfo when missing.
+    try {
+      const token = getToken()
+      if (token) {
+        (async () => {
+          const payload = {
+            title: movie.title,
+            externalId: movie.externalId,
+            year: movie.year,
+            posterUrl: movie.posterUrl,
+            genres: movie.genres,
+            overview: movie.overview,
+          }
+
+          const needsGenres = !payload.genres || (Array.isArray(payload.genres) && payload.genres.length === 0) || String(payload.genres || '').trim() === ''
+          const needsOverview = !payload.overview || String(payload.overview || '').trim() === ''
+
+          if ((needsGenres || needsOverview) && movie.title) {
+            try {
+              const info = await moviesAPI.getStreamingInfo(movie.title, movie.year)
+              if (info) {
+                if (needsGenres && Array.isArray(info.genre_names) && info.genre_names.length) {
+                  payload.genres = info.genre_names
+                }
+                if (needsOverview && info.plot_overview) {
+                  payload.overview = info.plot_overview
+                }
+                if (!payload.posterUrl && info.poster) {
+                  payload.posterUrl = info.poster
+                }
+              }
+            } catch (_) {
+              // ignore provider errors
+            }
+          }
+
+          try {
+            await moviesAPI.create(payload)
+          } catch (_) {
+            // ignore network errors
+          }
+        })()
+      }
+    } catch {}
   }
 
   const removeFromLocalList = (listName, externalId) => {
@@ -41,6 +86,13 @@ export function useLocalLists() {
       ...prev,
       [listName]: (prev[listName] || []).filter((m) => m.externalId !== externalId),
     }))
+    // Persist removal to server if authenticated (background)
+    try {
+      const token = getToken()
+      if (token) {
+        moviesAPI.removeByExternal(externalId).catch(() => {})
+      }
+    } catch {}
   }
 
   const getListsForMovie = (externalId) => {
@@ -72,11 +124,61 @@ export function useLocalLists() {
         [listName]: [mappedMovie, ...currentList],
       }
     })
+    // If we just added the movie (not removed), persist similarly to addToLocalList
+    try {
+      const token = getToken()
+      if (token) {
+        (async () => {
+          const payload = {
+            title: movie.title,
+            externalId: movie.externalId,
+            year: movie.year,
+            posterUrl: movie.posterUrl,
+            genres: movie.genres,
+            overview: movie.overview,
+          }
+
+          const needsGenres = !payload.genres || (Array.isArray(payload.genres) && payload.genres.length === 0) || String(payload.genres || '').trim() === ''
+          const needsOverview = !payload.overview || String(payload.overview || '').trim() === ''
+
+          if ((needsGenres || needsOverview) && movie.title) {
+            try {
+              const info = await moviesAPI.getStreamingInfo(movie.title, movie.year)
+              if (info) {
+                if (needsGenres && Array.isArray(info.genre_names) && info.genre_names.length) {
+                  payload.genres = info.genre_names
+                }
+                if (needsOverview && info.plot_overview) {
+                  payload.overview = info.plot_overview
+                }
+                if (!payload.posterUrl && info.poster) {
+                  payload.posterUrl = info.poster
+                }
+              }
+            } catch (_) {
+              // ignore provider errors
+            }
+          }
+
+          try {
+            await moviesAPI.create(payload)
+          } catch (_) {
+            // ignore network errors
+          }
+        })()
+      }
+    } catch {}
   }
 
   const createList = (listName) => {
     if (!listName.trim() || listName === 'favoritas') return false
-    
+    // Try to create server-side list when authenticated (fire-and-forget)
+    try {
+      const token = getToken()
+      if (token) {
+        listsAPI.create(listName).catch(() => {})
+      }
+    } catch {}
     setLocalLists((prev) => {
       if (prev[listName]) return prev
       return {

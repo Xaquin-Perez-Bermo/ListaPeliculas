@@ -63,6 +63,14 @@ export const authAPI = {
   me: () => apiCall('/api/auth/me'),
 }
 
+export const listsAPI = {
+  create: (name) =>
+    apiCall('/api/lists', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+}
+
 // Movies endpoints
 export const moviesAPI = {
   getAll: (status = 'all', genre = '') =>
@@ -112,6 +120,10 @@ export const moviesAPI = {
 
   clearRating: (id) =>
     apiCall(`/api/movies/${id}/rating`, {
+      method: 'DELETE',
+    }),
+  removeByExternal: (externalId) =>
+    apiCall(`/api/movies/external/${encodeURIComponent(externalId)}`, {
       method: 'DELETE',
     }),
 }

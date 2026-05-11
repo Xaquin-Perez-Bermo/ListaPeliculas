@@ -17,14 +17,10 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS lists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  users_subscribed INTEGER NOT NULL,
-  movie_id INTEGER NOT NULL,
-  created_by INTEGER NOT NULL,
+  created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  unique(name, users_subscribed),
-  FOREIGN KEY (created_by) REFERENCES users(id),
-  FOREIGN KEY (users_subscribed) REFERENCES users(id),
-  FOREIGN KEY (movie_id) REFERENCES movies(id)
+  UNIQUE(name, created_by),
+  FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS movies (
@@ -42,9 +38,12 @@ CREATE TABLE IF NOT EXISTS movies (
 
 CREATE TABLE IF NOT EXISTS list_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  movie_id INTEGER UNIQUE NOT NULL,
+  list_id INTEGER NOT NULL,
+  movie_id INTEGER NOT NULL,
   added_by INTEGER NOT NULL,
   added_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(list_id, movie_id),
+  FOREIGN KEY (list_id) REFERENCES lists(id),
   FOREIGN KEY (movie_id) REFERENCES movies(id),
   FOREIGN KEY (added_by) REFERENCES users(id)
 );

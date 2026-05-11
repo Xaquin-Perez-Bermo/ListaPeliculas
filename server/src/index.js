@@ -254,7 +254,7 @@ app.get('/api/movies', requireAuth, async (req, res) => {
   return res.json(movies);
 });
 
-app.post('/api/movies', requireAuth, (req, res) => {
+app.post('/api/movies', requireAuth, async (req, res) => {
   const title = String(req.body.title || '').trim();
   const externalId = String(req.body.externalId || '').trim();
 
@@ -269,6 +269,26 @@ app.post('/api/movies', requireAuth, (req, res) => {
   if (existing) {
     movieId = existing.id;
   } else {
+    // Try to enrich with streaming provider if overview/genres missing
+    let genresToSave = normalizeGenres(req.body.genres);
+    let overviewToSave = req.body.overview ? String(req.body.overview) : '';
+
+    if ((!genresToSave || genresToSave === '') || !overviewToSave) {
+      try {
+        const info = await getStreamingInfo(title, Number.isInteger(req.body.year) ? req.body.year : null);
+        if (info) {
+          if ((!genresToSave || genresToSave === '') && Array.isArray(info.genre_names)) {
+            genresToSave = normalizeGenres(info.genre_names);
+          }
+          if (!overviewToSave && info.plot_overview) {
+            overviewToSave = String(info.plot_overview);
+          }
+        }
+      } catch (err) {
+        // ignore provider errors and continue
+      }
+    }
+
     const insert = run(
       `
       INSERT INTO movies (external_id, title, year, genres, poster_url, overview, created_by)
@@ -278,9 +298,9 @@ app.post('/api/movies', requireAuth, (req, res) => {
         externalId,
         title,
         Number.isInteger(req.body.year) ? req.body.year : null,
-        normalizeGenres(req.body.genres),
+        genresToSave,
         req.body.posterUrl ? String(req.body.posterUrl) : null,
-        req.body.overview ? String(req.body.overview) : '',
+        overviewToSave,
         req.user.id,
       ]
     );
@@ -288,13 +308,20 @@ app.post('/api/movies', requireAuth, (req, res) => {
     movieId = insert.lastInsertRowid;
   }
 
+  // Associate the movie with a list if provided, otherwise use a default global list (id 1).
+  let listId = Number.isInteger(req.body.listId) ? req.body.listId : null;
+  if (!listId) {
+    const globalList = get(`SELECT id FROM lists WHERE name = ? AND created_by IS NULL LIMIT 1`, ['global']);
+    listId = globalList ? globalList.id : null;
+  }
+
   run(
     `
-    INSERT INTO list_entries (movie_id, added_by)
-    VALUES (?, ?)
-    ON CONFLICT(movie_id) DO NOTHING
+    INSERT INTO list_entries (list_id, movie_id, added_by)
+    VALUES (?, ?, ?)
+    ON CONFLICT(list_id, movie_id) DO NOTHING
     `,
-    [movieId, req.user.id]
+    [listId, movieId, req.user.id]
   );
 
   logAction('movie_added', { movieId, title }, req.user.id);
@@ -309,6 +336,25 @@ app.post('/api/movies', requireAuth, (req, res) => {
     posterUrl: movie.poster_url,
     overview: movie.overview,
   });
+});
+
+app.post('/api/lists', requireAuth, (req, res) => {
+  const name = String(req.body.name || '').trim();
+
+  if (!name) {
+    return res.status(400).json({ error: 'Nombre de lista requerido' });
+  }
+
+  const existing = get(`SELECT id FROM lists WHERE name = ? AND created_by = ?`, [name, req.user.id]);
+  if (existing) {
+    return res.status(409).json({ error: 'Ya existe una lista con ese nombre para este usuario' });
+  }
+
+  const insert = run(`INSERT INTO lists (name, created_by) VALUES (?, ?)`, [name, req.user.id]);
+
+  logAction('list_created', { listId: insert.lastInsertRowid, name }, req.user.id);
+
+  return res.status(201).json({ id: insert.lastInsertRowid, name });
 });
 
 app.post('/api/movies/:id/veto', requireAuth, (req, res) => {
@@ -339,14 +385,29 @@ app.delete('/api/movies/:id', requireAuth, (req, res) => {
     return res.status(404).json({ error: 'Pelicula no encontrada' });
   }
 
-  run(
-    `DELETE FROM movie_vetoes WHERE user_id = ? AND movie_id = ?`,
-    [req.user.id, movieId]
-  );
+  // Remove the movie from list_entries for this user (if they were the one who added it)
+  run(`DELETE FROM list_entries WHERE movie_id = ? AND added_by = ?`, [movieId, req.user.id]);
 
-  logAction('movie_vetoed', { movieId, title: movie.title }, req.user.id);
+  logAction('movie_removed_from_list', { movieId, title: movie.title }, req.user.id);
 
-  return res.status(201).json({ ok: true });
+  return res.json({ ok: true });
+});
+
+// Remove by external id convenience endpoint
+app.delete('/api/movies/external/:externalId', requireAuth, (req, res) => {
+  const externalId = String(req.params.externalId || '').trim();
+
+  const movie = get(`SELECT id, title FROM movies WHERE external_id = ?`, [externalId]);
+
+  if (!movie) {
+    return res.status(404).json({ error: 'Pelicula no encontrada' });
+  }
+
+  run(`DELETE FROM list_entries WHERE movie_id = ? AND added_by = ?`, [movie.id, req.user.id]);
+
+  logAction('movie_removed_from_list', { movieId: movie.id, title: movie.title }, req.user.id);
+
+  return res.json({ ok: true });
 });
 
 app.delete('/api/movies/:id/veto', requireAuth, (req, res) => {
@@ -524,3 +585,13 @@ app.listen(port, () => {
   // eslint-disable-next-line no-console
   console.log(`API escuchando en http://localhost:${port}`);
 });
+
+// Ensure there is a default public list named 'global'
+try {
+  const existingGlobal = get(`SELECT id FROM lists WHERE name = ? AND created_by IS NULL`, ['global']);
+  if (!existingGlobal) {
+    run(`INSERT INTO lists (name, created_by) VALUES (?, NULL)`, ['global']);
+  }
+} catch (err) {
+  // ignore DB errors on startup
+}
