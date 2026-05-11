@@ -25,7 +25,7 @@ export function UserListsScreen({ localLists, onCreateList, onDeleteList,onOpenL
                 {canDeleteList ? (
                   <button
                     className="delete-list-btn"
-                    onClick={() => onDeleteList(listName)}
+                    onClick={(e) => { e.stopPropagation(); onDeleteList(listName) }}
                     title={t('deleteList', { listName })}
                     type="button"
                   >
