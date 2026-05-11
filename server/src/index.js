@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const bcrypt = require('bcryptjs');
-const { all, get, run, logAction } = require('./db');
+const { db, all, get, run, logAction } = require('./db');
 const { searchExternalMovies } = require('./movieSearch');
 const { getStreamingInfo } = require('./streamingProvider');
 const { signToken, requireAuth } = require('./auth');
@@ -364,32 +364,20 @@ app.post('/api/lists', requireAuth, (req, res) => {
     return res.status(409).json({ error: 'Ya existe una lista con ese nombre para este usuario' });
   }
 
-  // Definimos la transacción
-  // 'db' es tu instancia de better-sqlite3
   const createListTransaction = db.transaction((listName, userId) => {
-    // Se ejecuta dentro de un BEGIN
     const insert = run(`INSERT INTO lists (name, created_by) VALUES (?, ?)`, [listName, userId]);
     const listId = insert.lastInsertRowid;
-
     run(`INSERT INTO list_members (list_id, user_id) VALUES (?, ?)`, [listId, userId]);
-    
     return listId;
-  }); // Si hay un throw dentro, hace ROLLBACK. Si termina, hace COMMIT.
+  });
 
   try {
-    // Ejecutamos la transacción
     const newListId = createListTransaction(name, req.user.id);
-
-    // Los logs los dejamos fuera de la transacción si son a sistemas externos (archivos, otra API)
-    // Si logAction escribe en SQLite, podrías meterlo dentro de la transacción de arriba.
     logAction('list_created', { listId: newListId, name }, req.user.id);
-    logAction('list_member_added', { listId: newListId, userId: req.user.id }, req.user.id);
-
     return res.status(201).json({ id: newListId, name });
-    
   } catch (error) {
-    console.error('Error en la transacción:', error);
-    return res.status(500).json({ error: 'Error al procesar la solicitud' });
+    console.error('Error creando lista:', error);
+    return res.status(500).json({ error: 'Error al crear la lista' });
   }
 });
 
