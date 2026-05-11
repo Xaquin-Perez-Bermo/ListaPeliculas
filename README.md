@@ -245,3 +245,101 @@ Errores de extensiones del navegador:
 - Persistir idioma en localStorage.
 - Añadir fallback de traducciones por namespace.
 - Añadir tests E2E de flujo Guardada con Playwright.
+
+## 16. Cambios recientes de arquitectura (busqueda)
+
+Esta seccion resume los cambios introducidos para reducir prop drilling y facilitar el mantenimiento del flujo de busqueda.
+
+### 16.1 Paso de datos desde App
+
+Antes:
+- App pasaba muchas props sueltas a SearchScreen.
+
+Ahora:
+- App pasa 4 objetos agrupados:
+	- search: estado y acciones de busqueda externa.
+	- lists: estado y helpers de listas.
+	- listActions: acciones para mutar listas.
+	- i18n: funciones de traduccion.
+
+Objetivo:
+- Reducir acoplamiento y ruido en la firma del componente.
+- Hacer mas claro que parte de datos pertenece a cada dominio.
+
+### 16.2 SearchScreen sin subcomponente intermedio
+
+Antes:
+- Existia un subcomponente ExternalSearchSection.
+
+Ahora:
+- SearchScreen contiene directamente el render principal de la pantalla.
+
+Objetivo:
+- Evitar saltos innecesarios para leer la funcionalidad.
+- Mantener la logica de la pantalla en un unico punto de entrada.
+
+### 16.3 Contexto local de SearchScreen
+
+Archivo clave:
+- client/src/screens/searchScreen/SearchScreenContext.jsx
+
+Responsabilidad:
+- Compartir datos de busqueda/listas entre SearchScreen y sus hijos profundos (cards, modal, etc.) sin encadenar props por varios niveles.
+
+Regla de uso:
+- Cualquier componente que necesite estos datos debe usar useSearchScreenContext() y estar dentro de SearchScreenProvider.
+
+Componentes que consumen este contexto:
+- client/src/components/search/SearchMovieCard.jsx
+- client/src/screens/searchScreen/ModalMovieInfo.jsx
+
+## 17. Guia de ModalMovieInfo y estrategia de render
+
+Archivo:
+- client/src/screens/searchScreen/ModalMovieInfo.jsx
+
+### 17.1 Que hace ModalMovieInfo
+
+ModalMovieInfo coordina tres responsabilidades:
+- Leer estado compartido desde SearchScreenContext.
+- Gestionar estado local de UI (showListSelector).
+- Delegar la composicion visual en helpers para reducir complejidad.
+
+### 17.2 Por que se separo en helpers
+
+Se extrajeron funciones de render para:
+- Bajar complejidad cognitiva del componente principal.
+- Separar bloques de UI que cambian por condiciones distintas.
+- Facilitar pruebas manuales y refactors locales.
+
+Helpers actuales:
+- renderMovieMeta(streamingInfoData, t): pinta runtime, rating US, user rating y critic score.
+- renderSources(streamingInfoData, t): pinta plataformas y deduplica proveedores por nombre.
+- renderModalBody({...}): centraliza el flujo condicional principal (loading, error, contenido, estado vacio).
+
+### 17.3 Flujo de render (orden)
+
+1. ModalMovieInfo obtiene datos del contexto.
+2. Si no hay selectedSearchMovie, retorna null para evitar render invalido.
+3. Renderiza cabecera (titulo, anio, boton de cierre).
+4. Delega el cuerpo a renderModalBody, que evalua:
+	 - loading
+	 - error
+	 - contenido con streamingInfoData
+	 - empty state cuando no hay loading/data/error
+5. Si el usuario pulsa guardar, activa showListSelector y muestra ListSelector.
+
+### 17.4 Notas para extender sin romper
+
+- Si agregas campos nuevos de metadata (ejemplo: director, pais), prioriza hacerlo en renderMovieMeta.
+- Si agregas logica de proveedores (ejemplo: filtrar por tipo), hazlo en renderSources.
+- Mantener ModalMovieInfo enfocado en orquestacion y estado local.
+- Evitar volver a mover logica compleja al JSX principal del componente.
+
+### 17.5 Checklist rapido al tocar este modal
+
+- Seleccionar pelicula abre el modal con datos correctos.
+- Loading, error y empty state se excluyen correctamente.
+- Boton Guardar abre ListSelector.
+- Guardado local/compartido sigue funcionando desde el modal.
+- Cierre del modal no deja estado visual inconsistente.
