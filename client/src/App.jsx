@@ -221,30 +221,20 @@ function App() {
           <main className="content">
             {screen === 'buscar' ? (
               <SearchScreen
-                discoverQuery={search.discoverQuery}
-                setDiscoverQuery={search.setDiscoverQuery}
-                discoverResults={search.discoverResults}
-                discoverError={search.discoverError}
-                handleDiscover={search.handleDiscover}
-                selectedSearchMovie={search.selectedSearchMovie}
-                streamingInfoData={search.streamingInfoData}
-                streamingInfoDataById={search.streamingInfoDataById}
-                streamingInfoLoading={search.streamingInfoLoading}
-                streamingInfoLoadingById={search.streamingInfoLoadingById}
-                streamingInfoError={search.streamingInfoError}
-                fetchStreamingInfo={search.fetchStreamingInfo}
-                fetchStreamingInfoForMovie={search.fetchStreamingInfoForMovie}
-                localLists={localLists}
-                onToggleInLocalList={handleToggleInLocalList}
-                getListsForMovie={getListsForMovie}
-                isMovieSaved={isMovieSaved}
-                isInSharedList={(externalId) => sharedMovieIds.has(externalId)}
-                onCreateList={createList}
-                onDeleteList={deleteList}
-                onAddToSharedList={handleAddToSharedList}
-                isSearching={search.isSearching}
-                t={t}
-                tGenre={tGenre}
+                search={search}
+                lists={{
+                  localLists,
+                  getListsForMovie,
+                  isMovieSaved,
+                  isInSharedList: (externalId) => sharedMovieIds.has(externalId),
+                }}
+                listActions={{
+                  onToggleInLocalList: handleToggleInLocalList,
+                  onCreateList: createList,
+                  onDeleteList: deleteList,
+                  onAddToSharedList: handleAddToSharedList,
+                }}
+                i18n={{ t, tGenre }}
               />
             ) : null}
 

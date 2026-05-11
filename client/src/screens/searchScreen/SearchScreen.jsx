@@ -1,40 +1,47 @@
 /**
- * SearchScreen - Pantalla de búsqueda
+ * SearchScreen - Pantalla de busqueda
  */
-import SearchMovieCard from '../../components/search/SearchMovieCard';
+import { useEffect, useMemo, useState } from 'react'
+import PropTypes from 'prop-types'
+import SearchMovieCard from '../../components/search/SearchMovieCard'
 import ModalMovieInfo from './ModalMovieInfo'
 import ListSelector from '../lists/ListSelector'
-import { useEffect, useMemo, useState } from 'react'
-import ModalContainer from '../../components/general/ModalContainer';
+import ModalContainer from '../../components/general/ModalContainer'
+import { SearchScreenProvider } from './SearchScreenContext'
 
 const PAGE_SIZE = 8
 
-function ExternalSearchSection({
-	discoverQuery,
-	setDiscoverQuery,
-	discoverResults,
-	discoverError,
-	handleDiscover,
-	selectedSearchMovie,
-	streamingInfoData,
-	streamingInfoDataById = {},
-	streamingInfoLoading,
-	streamingInfoLoadingById = {},
-	streamingInfoError,
-	fetchStreamingInfo,
-	fetchStreamingInfoForMovie,
-	isSearching,
-	localLists,
-	onToggleInLocalList,
-	getListsForMovie,
-	isMovieSaved,
-	isInSharedList,
-	onCreateList,
-	onDeleteList,
-	onAddToSharedList,
-	t,
-	tGenre,
-}) {
+export function SearchScreen({ search, lists, listActions, i18n }) {
+	const { t, tGenre } = i18n
+	const {
+		discoverQuery,
+		setDiscoverQuery,
+		discoverResults,
+		discoverError,
+		handleDiscover,
+		selectedSearchMovie,
+		streamingInfoData,
+		streamingInfoDataById = {},
+		streamingInfoLoading,
+		streamingInfoLoadingById = {},
+		streamingInfoError,
+		fetchStreamingInfo,
+		fetchStreamingInfoForMovie,
+		isSearching,
+	} = search
+	const {
+		localLists,
+		getListsForMovie,
+		isMovieSaved,
+		isInSharedList,
+	} = lists
+	const {
+		onToggleInLocalList,
+		onCreateList,
+		onDeleteList,
+		onAddToSharedList,
+	} = listActions
+
 	const [likeTargetMovie, setLikeTargetMovie] = useState(null)
 	const [showModalMovieInfo, setShowModalMovieInfo] = useState(false)
 	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -70,7 +77,6 @@ function ExternalSearchSection({
 
 	const pendingCount = Math.max(0, visibleResults.length - resolvedVisibleCount)
 	const isVisibleBatchReady = visibleResults.length > 0 && resolvedVisibleCount >= visibleResults.length
-
 	const hasMore = visibleCount < discoverResults.length
 
 	useEffect(() => {
@@ -106,178 +112,165 @@ function ExternalSearchSection({
 		handleDiscover(event)
 	}
 
+	const contextValue = useMemo(
+		() => ({
+			discoverQuery,
+			setDiscoverQuery,
+			discoverResults,
+			discoverError,
+			handleDiscover,
+			selectedSearchMovie,
+			streamingInfoData,
+			streamingInfoDataById,
+			streamingInfoLoading,
+			streamingInfoLoadingById,
+			streamingInfoError,
+			fetchStreamingInfo,
+			fetchStreamingInfoForMovie,
+			isSearching,
+			localLists,
+			onToggleInLocalList,
+			getListsForMovie,
+			isMovieSaved,
+			isInSharedList,
+			onCreateList,
+			onDeleteList,
+			onAddToSharedList,
+			t,
+			tGenre,
+		}),
+		[
+			discoverQuery,
+			setDiscoverQuery,
+			discoverResults,
+			discoverError,
+			handleDiscover,
+			selectedSearchMovie,
+			streamingInfoData,
+			streamingInfoDataById,
+			streamingInfoLoading,
+			streamingInfoLoadingById,
+			streamingInfoError,
+			fetchStreamingInfo,
+			fetchStreamingInfoForMovie,
+			isSearching,
+			localLists,
+			onToggleInLocalList,
+			getListsForMovie,
+			isMovieSaved,
+			isInSharedList,
+			onCreateList,
+			onDeleteList,
+			onAddToSharedList,
+			t,
+			tGenre,
+		],
+	)
+
 	return (
-		<>
-			<form onSubmit={handleSearch} className="inline-form">
-				<input
-					type="text"
-					placeholder={t('searchPlaceholder')}
-					value={discoverQuery}
-					onChange={(event) => setDiscoverQuery(event.target.value)}
-					required
-				/>
-				<button type="submit" disabled={isSearching}>
-					{isSearching ? `🔍 ${t('searchingButton')}` : t('searchButton')}
-				</button>
-			</form>
+		<SearchScreenProvider value={contextValue}>
+			<section className="panel">
+				<h2>{t('searchTitle')}</h2>
 
-			{discoverError ? <p className="error">{discoverError}</p> : null}
-			{isSearching ? <p className="muted">⏳ {t('searchingButton')}</p> : null}
+				<form onSubmit={handleSearch} className="inline-form">
+					<input
+						type="text"
+						placeholder={t('searchPlaceholder')}
+						value={discoverQuery}
+						onChange={(event) => setDiscoverQuery(event.target.value)}
+						required
+					/>
+					<button type="submit" disabled={isSearching}>
+						{isSearching ? `🔍 ${t('searchingButton')}` : t('searchButton')}
+					</button>
+				</form>
 
-			{discoverResults.length > 0 ? (
-				<>
-					{pendingCount > 0 ? (
-						<p className="muted">⏳ {t('streamingInfoLoading')} ({pendingCount})</p>
-					) : null}
+				{discoverError ? <p className="error">{discoverError}</p> : null}
+				{isSearching ? <p className="muted">⏳ {t('searchingButton')}</p> : null}
 
-					<div className="search-layout">
-						<ul className="result-list search-results-col">
-							{readyResults.map((movie) => {
-								const streamingKey = movie.externalId || `${movie.title}-${movie.year}`
-								const savedInLists = getListsForMovie(movie.externalId)
-								const hasSavedLocal = savedInLists.length > 0
-								const hasSavedAnywhere = hasSavedLocal || isInSharedList(movie.externalId)
-								return (
-									<SearchMovieCard
-										key={movie.externalId || movie.id || movie.title}
-										movie={movie}
-										setLikeTargetMovie={setLikeTargetMovie}
-										t={t}
-										tGenre={tGenre}
-										fetchStreamingInfo={(movie) => {
-											fetchStreamingInfo(movie)
-											setShowModalMovieInfo(true)
-										}}
-										selectedSearchMovie={selectedSearchMovie}
-										streamingInfoData={streamingInfoDataById?.[streamingKey]}
-										hasSavedAnywhere={hasSavedAnywhere}>
-									</SearchMovieCard>
-								)
-							})}
-						</ul>
+				{discoverResults.length > 0 ? (
+					<>
+						{pendingCount > 0 ? (
+							<p className="muted">⏳ {t('streamingInfoLoading')} ({pendingCount})</p>
+						) : null}
 
-						{showModalMovieInfo && selectedSearchMovie ? (
-							<ModalContainer
-								onClose={() => setShowModalMovieInfo(false)}
-								t={t}
-								className="modal movie-info-modal"
-							>
-								<ModalMovieInfo
-									selectedSearchMovie={selectedSearchMovie}
-									streamingInfoData={streamingInfoData}
-									streamingInfoLoading={streamingInfoLoading}
-									streamingInfoError={streamingInfoError}
+						<div className="search-layout">
+							<ul className="result-list search-results-col">
+								{readyResults.map((movie) => {
+									const streamingKey = movie.externalId || `${movie.title}-${movie.year}`
+									return (
+										<SearchMovieCard
+											key={movie.externalId || movie.id || movie.title}
+											movie={movie}
+											setLikeTargetMovie={setLikeTargetMovie}
+											onSelectMovie={(targetMovie) => {
+												fetchStreamingInfo(targetMovie)
+												setShowModalMovieInfo(true)
+											}}
+											streamingInfoData={streamingInfoDataById?.[streamingKey]}
+										/>
+									)
+								})}
+							</ul>
+
+							{showModalMovieInfo && selectedSearchMovie ? (
+								<ModalContainer
 									onClose={() => setShowModalMovieInfo(false)}
+									t={t}
+									className="modal movie-info-modal"
+								>
+									<ModalMovieInfo onClose={() => setShowModalMovieInfo(false)} />
+								</ModalContainer>
+							) : null}
+						</div>
+
+						{hasMore ? (
+							<div className="search-load-more">
+								<button
+									type="button"
+									className="ghost"
+									onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+									disabled={!isVisibleBatchReady}
+								>
+									{t('searchLoadMore', {
+										shown: committedVisibleCount,
+										total: discoverResults.length,
+									})}
+								</button>
+							</div>
+						) : null}
+
+						{likeTargetMovie ? (
+							<ModalContainer onClose={() => setLikeTargetMovie(null)} t={t}>
+								<ListSelector
 									localLists={localLists}
-									onToggleInLocalList={onToggleInLocalList}
-									getListsForMovie={getListsForMovie}
-									isMovieSaved={isMovieSaved}
-									isInSharedList={isInSharedList}
+									selectedListNames={getListsForMovie(likeTargetMovie.externalId)}
+									isInSharedList={isInSharedList(likeTargetMovie.externalId)}
+									onToggleInList={(listName) => {
+										onToggleInLocalList(listName, likeTargetMovie)
+									}}
 									onCreateList={onCreateList}
 									onDeleteList={onDeleteList}
-									onAddToSharedList={onAddToSharedList}
+									onAddToSharedList={() => {
+										onAddToSharedList(likeTargetMovie)
+									}}
 									t={t}
-									tGenre={tGenre}
 								/>
 							</ModalContainer>
 						) : null}
-					</div>
-
-					{hasMore ? (
-						<div className="search-load-more">
-							<button
-								type="button"
-								className="ghost"
-								onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-								disabled={!isVisibleBatchReady}
-							>
-								{t('searchLoadMore', {
-									shown: committedVisibleCount,
-									total: discoverResults.length,
-								})}
-							</button>
-						</div>
-					) : null}
-
-					{likeTargetMovie ? (
-						<ModalContainer onClose={() => setLikeTargetMovie(null)} t={t}>
-							<ListSelector
-								likeTargetMovie={likeTargetMovie}
-								localLists={localLists}
-								getListsForMovie={getListsForMovie}
-								isInSharedList={isInSharedList}
-								onToggleInLocalList={onToggleInLocalList}
-								onCreateList={onCreateList}
-								onDeleteList={onDeleteList}
-								onAddToSharedList={onAddToSharedList}
-								t={t}
-							/>
-						</ModalContainer>
-					) : null}
-				</>
-			) : null}
-		</>
+					</>
+				) : null}
+			</section>
+		</SearchScreenProvider>
 	)
 }
 
-export function SearchScreen({
-	discoverQuery,
-	setDiscoverQuery,
-	discoverResults,
-	discoverError,
-	handleDiscover,
-	selectedSearchMovie,
-	streamingInfoData,
-	streamingInfoDataById,
-	streamingInfoLoading,
-	streamingInfoLoadingById,
-	streamingInfoError,
-	fetchStreamingInfo,
-	fetchStreamingInfoForMovie,
-	isSearching,
-	localLists,
-	onToggleInLocalList,
-	getListsForMovie,
-	isMovieSaved,
-	isInSharedList,
-	onCreateList,
-	onDeleteList,
-	onAddToSharedList,
-	t,
-	tGenre,
-}) {
-	return (
-		<section className="panel">
-			<h2>{t('searchTitle')}</h2>
-
-			<ExternalSearchSection
-				discoverQuery={discoverQuery}
-				setDiscoverQuery={setDiscoverQuery}
-				discoverResults={discoverResults}
-				discoverError={discoverError}
-				handleDiscover={handleDiscover}
-				selectedSearchMovie={selectedSearchMovie}
-				streamingInfoData={streamingInfoData}
-				streamingInfoDataById={streamingInfoDataById}
-				streamingInfoLoading={streamingInfoLoading}
-				streamingInfoLoadingById={streamingInfoLoadingById}
-				streamingInfoError={streamingInfoError}
-				fetchStreamingInfo={fetchStreamingInfo}
-				fetchStreamingInfoForMovie={fetchStreamingInfoForMovie}
-				isSearching={isSearching}
-				localLists={localLists}
-				onToggleInLocalList={onToggleInLocalList}
-				getListsForMovie={getListsForMovie}
-				isMovieSaved={isMovieSaved}
-				isInSharedList={isInSharedList}
-				onCreateList={onCreateList}
-				onDeleteList={onDeleteList}
-				onAddToSharedList={onAddToSharedList}
-				t={t}
-				tGenre={tGenre}
-			/>
-
-		</section>
-	)
+SearchScreen.propTypes = {
+	search: PropTypes.object.isRequired,
+	lists: PropTypes.object.isRequired,
+	listActions: PropTypes.object.isRequired,
+	i18n: PropTypes.shape({
+		t: PropTypes.func.isRequired,
+		tGenre: PropTypes.func.isRequired,
+	}).isRequired,
 }
-
