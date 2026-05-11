@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useAuth, useMovies, useSearch, useLocalLists, useNavigation } from './hooks'
+import { listsAPI } from './services/api'
 import { AuthScreen } from './screens/AuthScreen'
 import { SearchScreen } from './screens/searchScreen/SearchScreen'
 import { ListScreen } from './screens/lists/ListScreen'
@@ -165,9 +166,26 @@ function App() {
 
   const handleOpenList = (listName, movies) => {
     setSelectedListName(listName)
-    setSelectedMovieList(movies)
-    console.log(movies)
-    setScreen('list')
+    // Try to load fresh list from server when authenticated
+    ;(async () => {
+      try {
+        const serverList = await listsAPI.getListByName(listName).catch(() => null)
+        if (serverList && serverList.id) {
+          const serverMovies = await listsAPI.getMovies(serverList.id).catch(() => null)
+          if (Array.isArray(serverMovies)) {
+            setSelectedMovieList(serverMovies)
+            setScreen('list')
+            return
+          }
+        }
+      } catch (_) {
+        // ignore
+      }
+
+      // fallback to provided movies or empty
+      setSelectedMovieList(movies || [])
+      setScreen('list')
+    })()
   }
 
   // Memoized values

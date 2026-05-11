@@ -1,5 +1,8 @@
+
+
 /**
- * useLocalLists Hook - Maneja listas locales
+ * useLists Hook - carga listas desde la base de datos cuando hay sesión
+ * y usa localStorage como caché/offline.
  */
 
 import { useState, useEffect } from 'react'
@@ -7,205 +10,179 @@ import { loadLocalLists, saveLocalLists } from '../services/localStorage'
 import { getToken, moviesAPI, listsAPI } from '../services/api'
 import { mapMovieToLocal } from '../utils/movieUtils'
 
-export function useLocalLists() {
-  const [localLists, setSelectedLists] = useState(() => loadLocalLists())
+export function useLists() {
+  const [lists, setLists] = useState(() => loadLocalLists())
 
-  // Sync with localStorage whenever lists change
+  // persistir cache local
   useEffect(() => {
-    saveLocalLists(localLists)
-  }, [localLists])
+    saveLocalLists(lists)
+  }, [lists])
 
-  const addToSelectedList = (listName, movie) => {
+  // cargar desde servidor al montar si hay token (reemplaza/mergea listas conocidas)
+  useEffect(() => {
+    let cancelled = false
     const token = getToken()
+    if (!token) return
 
-    if (token) {
-      (async () => {
-        try {
-          let lists = await listsAPI.getAll();
-          let selectedList = lists.find(l => l.name === listName);
-          if (!selectedList) {
-            // Create the list if it doesn't exist
-            try {
-              const newList = await listsAPI.create({ name: listName });
-              selectedList = newList;
-            } catch (error) {
-              console.error('Error creating list:', error);
-            }
-            try {
-              const movie = await moviesAPI.getByExternalId(movie.externalId)
-              if (!movie) {
-
-                const payload = {
-                  title: movie.title,
-                  externalId: movie.externalId,
-                  year: movie.year,
-                  posterUrl: movie.posterUrl,
-                  genres: movie.genres,
-                  overview: movie.overview,
-                }
-
-                const needsGenres = !payload.genres || (Array.isArray(payload.genres) && payload.genres.length === 0) || String(payload.genres || '').trim() === ''
-                const needsOverview = !payload.overview || String(payload.overview || '').trim() === ''
-
-                if ((needsGenres || needsOverview) && movie.title) {
-                  try {
-                    const info = await moviesAPI.getStreamingInfo(movie.title, movie.year)
-                    if (info) {
-                      if (needsGenres && Array.isArray(info.genre_names) && info.genre_names.length) {
-                        payload.genres = info.genre_names
-                      }
-                      if (needsOverview && info.plot_overview) {
-                        payload.overview = info.plot_overview
-                      }
-                      if (!payload.posterUrl && info.poster) {
-                        payload.posterUrl = info.poster
-                      }
-                    }
-                  } catch (_) {
-                    // ignore provider errors
-                  }
-                }
-                const movie = await moviesAPI.create(payload);
-
-              }
-            }
-            catch (error) {
-              console.error('Error al obtener la película:', error);
-            }
-            await listsAPI.addMovieToList(selectedList.id, movie.id);
+    async function fetchServerLists() {
+      try {
+        const localCache = loadLocalLists()
+        const serverLists = await listsAPI.getAll()
+        const next = { ...localCache }
+        for (const l of serverLists) {
+          try {
+            const movies = await listsAPI.getMovies(l.id)
+            next[l.name] = Array.isArray(movies) ? movies.map(mapMovieToLocal) : []
+          } catch {
+            next[l.name] = next[l.name] || []
           }
-        } catch (error) {
-          console.error('Error fetching lists:', error);
         }
-      })()
-    }
-
-    // Create list if it doesn't exist
-    if (!prev[listName]) {
-      return {
-        ...prev,
-        [listName]: [mappedMovie],
+        if (!cancelled) setLists(next)
+      } catch {
+        // fallback: keep local cache
       }
     }
 
-    const exists = prev[listName].some((item) => item.externalId === mappedMovie.externalId)
-    if (exists) return prev
+    fetchServerLists()
 
-    return {
-      ...prev,
-      [listName]: [mappedMovie, ...prev[listName]],
+    return () => {
+      cancelled = true
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  const addToList = (listName, movie) => {
+    const mapped = mapMovieToLocal(movie)
 
-  const removeFromSelectedList = (listName, movieId) => {
-    setSelectedLists((prev) => ({
-      ...prev,
-      [listName]: (prev[listName] || []).filter((m) => m.movieId !== movieId),
-    }))
-    // Persist removal to server if authenticated (background)
+    setLists((prev) => {
+      if (!prev[listName]) return { ...prev, [listName]: [mapped] }
+      if (prev[listName].some((m) => m.externalId === mapped.externalId)) return prev
+      return { ...prev, [listName]: [mapped, ...prev[listName]] }
+    })
+
+    // persistir en servidor si hay sesión
     try {
       const token = getToken()
       if (token) {
-        listsAPI.removeMovieFromList(listName, movieId).catch(() => { })
+        ;(async () => {
+          try {
+            let serverLists = await listsAPI.getAll()
+            let serverList = serverLists.find((s) => s.name === listName)
+            if (!serverList) {
+              serverList = await listsAPI.create(listName)
+            }
+
+            await moviesAPI.create({
+              title: movie.title,
+              externalId: movie.externalId,
+              year: movie.year,
+              posterUrl: movie.posterUrl,
+              genres: movie.genres,
+              overview: movie.overview,
+              listId: serverList.id,
+            })
+          } catch {
+            // ignore network errors
+          }
+        })()
       }
-    } catch { }
+    } catch {}
+  }
+
+  const removeFromList = (listName, externalId) => {
+    setLists((prev) => ({
+      ...prev,
+      [listName]: (prev[listName] || []).filter((m) => m.externalId !== externalId),
+    }))
+
+    try {
+      const token = getToken()
+      if (token) {
+        // convenience endpoint: DELETE /api/movies/external/:externalId removes user's entry
+        moviesAPI.removeByExternal(externalId).catch(() => {})
+      }
+    } catch {}
   }
 
   const getListsForMovie = (externalId) => {
     if (!externalId) return []
 
-    return Object.entries(localLists)
+    return Object.entries(lists)
       .filter(([, items]) => Array.isArray(items) && items.some((m) => m.externalId === externalId))
       .map(([listName]) => listName)
   }
 
   const isMovieSaved = (externalId) => getListsForMovie(externalId).length > 0
 
-
-  // Si ya está en la lista, lo quita; si no, lo añade
-  const toggleMovieInLocalList = (listName, movie) => {
-    const mappedMovie = mapMovieToLocal(movie)
-
-    setSelectedLists((prev) => {
-      const currentList = prev[listName] || []
-      const exists = currentList.some((item) => item.externalId === mappedMovie.id)
-
-      if (exists) {
-        removeFromSelectedList(listName, mappedMovie.id)
-        return {
-          ...prev,
-          [listName]: currentList.filter((item) => item.externalId !== mappedMovie.id),
-        }
-      } else {
-        addToSelectedList(listName, movie)
-      }
-
-      return {
-        ...prev,
-        [listName]: [mappedMovie, ...currentList],
-      }
-    })
+  const toggleMovieInList = (listName, movie) => {
+    const mapped = mapMovieToLocal(movie)
+    const currentlyIn = (lists[listName] || []).some((m) => m.externalId === mapped.externalId)
+    if (currentlyIn) {
+      removeFromList(listName, mapped.externalId)
+    } else {
+      addToList(listName, movie)
+    }
   }
 
   const createList = (listName) => {
     if (!listName.trim() || listName === 'favoritas') return false
-    const token = getToken()
-    if (token) {
-      (async () => {
-        try {
-          await listsAPI.create(listName.trim())
-        } catch (error) {
-          console.error('Error creating list:', error);
-        }
-      })()
-    }
-    setSelectedLists((prev) => {
-      if (prev[listName]) return prev
-      return {
-        ...prev,
-        [listName]: [],
+    try {
+      const token = getToken()
+      if (token) {
+        listsAPI.create(listName).catch(() => {})
       }
-    })
+    } catch {}
+    setLists((prev) => (prev[listName] ? prev : { ...prev, [listName]: [] }))
     return true
   }
 
   const deleteList = (listName) => {
-    // Never allow deleting 'favoritas'
     if (listName === 'favoritas') return false
 
-    const token = getToken();
-    if (token) {
-      (async () => {
-        try {
-          const list = awaitlistsAPI.getListByName(listName).catch(() => null)
-          if (list) {
-            listsAPI.delete(list.id).catch(() => { })
-          }
-        } catch (error) {
-          console.error('Error creating list:', error);
-        }
-      })()
-    }
-
-    setSelectedLists((prev) => {
+    // Optimista: actualizamos UI primero
+    setLists((prev) => {
       const next = { ...prev }
       delete next[listName]
       return next
     })
 
+    // Borrar en servidor si hay sesión: resolvemos el id por nombre y hacemos DELETE
+    try {
+      const token = getToken()
+      if (token) {
+        ;(async () => {
+          try {
+            const serverList = await listsAPI.getListByName(listName).catch(() => null)
+            if (serverList?.id) {
+              await listsAPI.delete(serverList.id).catch(() => {})
+            }
+          } catch {
+            // ignorar errores de red; la UI ya reflejó el borrado
+          }
+        })()
+      }
+    } catch {}
+
     return true
   }
 
   return {
-    localLists,
-    addToLocalList: addToSelectedList,
-    removeFromLocalList: removeFromSelectedList,
-    toggleMovieInLocalList,
+    // new API
+    lists,
+    addToList,
+    removeFromList,
+    toggleMovieInList,
     getListsForMovie,
     isMovieSaved,
     createList,
     deleteList,
+    // backward compatibility with previous API
+    localLists: lists,
+    addToLocalList: addToList,
+    removeFromLocalList: removeFromList,
+    toggleMovieInLocalList: toggleMovieInList,
   }
-
 }
+
+// backwards-compat alias for existing imports
+export { useLists as useLocalLists }
