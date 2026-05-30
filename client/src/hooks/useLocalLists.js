@@ -10,46 +10,90 @@ import { loadLocalLists, saveLocalLists } from '../services/localStorage'
 import { getToken, moviesAPI, listsAPI } from '../services/api'
 import { mapMovieToLocal } from '../utils/movieUtils'
 
+function findPreferredServerListByName(serverLists, listName) {
+  const sameName = (serverLists || []).filter((list) => list.name === listName)
+  if (!sameName.length) return null
+
+  return (
+    sameName.find((list) => list.isOwner) ||
+    sameName.find((list) => list.isMember) ||
+    sameName[0]
+  )
+}
+
 export function useLists() {
   const [lists, setLists] = useState(() => loadLocalLists())
+  const [serverLists, setServerLists] = useState([])
+  const [publicLists, setPublicLists] = useState([])
+  const [publicListQuery, setPublicListQuery] = useState('')
+  const [listsLoading, setListsLoading] = useState(false)
 
   // persistir cache local
   useEffect(() => {
     saveLocalLists(lists)
   }, [lists])
 
-  // cargar desde servidor al montar si hay token (reemplaza/mergea listas conocidas)
-  useEffect(() => {
-    let cancelled = false
+  const refreshFromServer = async () => {
     const token = getToken()
     if (!token) return
 
-    async function fetchServerLists() {
-      try {
-        const localCache = loadLocalLists()
-        const serverLists = await listsAPI.getAll()
-        const next = { ...localCache }
-        for (const l of serverLists) {
-          try {
-            const movies = await listsAPI.getMovies(l.id)
-            next[l.name] = Array.isArray(movies) ? movies.map(mapMovieToLocal) : []
-          } catch {
-            next[l.name] = next[l.name] || []
-          }
+    setListsLoading(true)
+    try {
+      const localCache = loadLocalLists()
+      const fetchedServerLists = await listsAPI.getAll()
+      const next = { ...localCache }
+
+      for (const listItem of fetchedServerLists) {
+        try {
+          const movies = await listsAPI.getMovies(listItem.id)
+          next[listItem.name] = Array.isArray(movies) ? movies.map(mapMovieToLocal) : []
+        } catch {
+          next[listItem.name] = next[listItem.name] || []
         }
-        if (!cancelled) setLists(next)
-      } catch {
-        // fallback: keep local cache
+      }
+
+      setServerLists(Array.isArray(fetchedServerLists) ? fetchedServerLists : [])
+      setLists(next)
+    } catch {
+      // fallback: keep local cache
+    } finally {
+      setListsLoading(false)
+    }
+  }
+
+  // cargar desde servidor al montar si hay token (reemplaza/mergea listas conocidas)
+  useEffect(() => {
+    refreshFromServer()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const token = getToken()
+    if (!token) {
+      return () => {
+        cancelled = true
       }
     }
 
-    fetchServerLists()
+    const loadPublicLists = async () => {
+      try {
+        const result = await listsAPI.searchPublic(publicListQuery)
+        if (!cancelled) {
+          setPublicLists(Array.isArray(result) ? result : [])
+        }
+      } catch {
+        if (!cancelled) {
+          setPublicLists([])
+        }
+      }
+    }
+
+    loadPublicLists()
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [publicListQuery])
 
   const addToList = (listName, movie) => {
     const mapped = mapMovieToLocal(movie)
@@ -64,10 +108,10 @@ export function useLists() {
     try {
       const token = getToken()
       if (token) {
-        ;(async () => {
+        const persistMovieInServerList = async () => {
           try {
-            let serverLists = await listsAPI.getAll()
-            let serverList = serverLists.find((s) => s.name === listName)
+            const fetchedServerLists = await listsAPI.getAll()
+            let serverList = findPreferredServerListByName(fetchedServerLists, listName)
             if (!serverList) {
               serverList = await listsAPI.create(listName)
             }
@@ -84,9 +128,13 @@ export function useLists() {
           } catch {
             // ignore network errors
           }
-        })()
+        }
+
+        persistMovieInServerList()
       }
-    } catch {}
+    } catch {
+      // ignore errors while syncing local update with server
+    }
   }
 
   const removeFromList = (listName, externalId) => {
@@ -101,7 +149,9 @@ export function useLists() {
         // convenience endpoint: DELETE /api/movies/external/:externalId removes user's entry
         moviesAPI.removeByExternal(externalId).catch(() => {})
       }
-    } catch {}
+    } catch {
+      // ignore errors while removing local movie from server
+    }
   }
 
   const getListsForMovie = (externalId) => {
@@ -124,14 +174,18 @@ export function useLists() {
     }
   }
 
-  const createList = (listName) => {
+  const createList = (listName, options = {}) => {
     if (!listName.trim() || listName === 'favoritas') return false
     try {
       const token = getToken()
       if (token) {
-        listsAPI.create(listName).catch(() => {})
+        listsAPI.create(listName, options).then(() => {
+          refreshFromServer().catch(() => {})
+        }).catch(() => {})
       }
-    } catch {}
+    } catch {
+      // ignore errors while creating list remotely
+    }
     setLists((prev) => (prev[listName] ? prev : { ...prev, [listName]: [] }))
     return true
   }
@@ -150,7 +204,7 @@ export function useLists() {
     try {
       const token = getToken()
       if (token) {
-        ;(async () => {
+        const deleteServerList = async () => {
           try {
             const serverList = await listsAPI.getListByName(listName).catch(() => null)
             if (serverList?.id) {
@@ -159,11 +213,57 @@ export function useLists() {
           } catch {
             // ignorar errores de red; la UI ya reflejó el borrado
           }
-        })()
+        }
+
+        deleteServerList()
       }
-    } catch {}
+    } catch {
+      // ignore errors while deleting list remotely
+    }
 
     return true
+  }
+
+  const subscribeToPublicList = async (listId) => {
+    try {
+      const token = getToken()
+      if (!token) return false
+
+      await listsAPI.subscribe(listId)
+      await refreshFromServer()
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const subscribeToPrivateList = async (inviteCode) => {
+    try {
+      const token = getToken()
+      if (!token) return false
+
+      const cleanCode = String(inviteCode || '').trim()
+      if (!cleanCode) return false
+
+      await listsAPI.subscribeByInvite(cleanCode)
+      await refreshFromServer()
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const updateListSettings = async (listId, payload) => {
+    try {
+      const token = getToken()
+      if (!token) return false
+
+      await listsAPI.updateSettings(listId, payload)
+      await refreshFromServer()
+      return true
+    } catch {
+      return false
+    }
   }
 
   return {
@@ -176,6 +276,15 @@ export function useLists() {
     isMovieSaved,
     createList,
     deleteList,
+    serverLists,
+    publicLists,
+    publicListQuery,
+    setPublicListQuery,
+    listsLoading,
+    refreshFromServer,
+    subscribeToPublicList,
+    subscribeToPrivateList,
+    updateListSettings,
     // backward compatibility with previous API
     localLists: lists,
     addToLocalList: addToList,

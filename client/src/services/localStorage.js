@@ -2,7 +2,7 @@
  * Local Storage Service
  */
 
-const LOCAL_LISTS_KEY = 'cinejunta-local-lists'
+const LOCAL_LISTS_KEY = 'Pelis Xuntos-local-lists'
 
 export const DEFAULT_LOCAL_LISTS = {
   favoritas: [],

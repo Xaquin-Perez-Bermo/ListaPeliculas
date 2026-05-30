@@ -1,4 +1,4 @@
-# CineJunta
+# Pelis Xuntos
 
 Aplicacion fullstack para descubrir peliculas, guardarlas por listas, gestionar vetos y valorar visionados.
 
@@ -53,6 +53,10 @@ Servidor (carpeta server):
 Backend:
 - PORT: puerto API (default 4000)
 - JWT_SECRET: secreto JWT (default desarrollo)
+- DB_FILE_PATH: ruta al archivo SQLite en servidor (recomendado en despliegue)
+
+Frontend:
+- VITE_API_BASE_URL: URL base de la API (ej: https://api.mi-dominio.com)
 
 Recomendacion:
 - Definir JWT_SECRET fuerte fuera de desarrollo.
@@ -82,6 +86,10 @@ Cliente (resumen):
 - Lista "favoritas" permanente (no eliminable)
 - Guardado con estado "Guardada" y toggle por lista
 - Selector de idioma (es/en) con provider i18n
+- Listas configurables publicas/privadas
+- Suscripcion a listas publicas con buscador
+- Configuracion de listas con vetos habilitados/deshabilitados
+- Pantalla de vistas con grafica de evolucion por genero y tiempo
 
 ## 8. UX de guardado (tipo Spotify)
 
@@ -125,6 +133,9 @@ Busqueda/listas:
 - GET /api/discover?q=term
 - GET /api/movies?status=all|active|vetoed&genre=text
 - POST /api/movies
+- GET /api/lists/public?q=texto
+- POST /api/lists/:listId/subscribe
+- PATCH /api/lists/:listId/settings
 
 Vetos:
 - POST /api/movies/:id/veto
@@ -245,6 +256,30 @@ Errores de extensiones del navegador:
 - Persistir idioma en localStorage.
 - Añadir fallback de traducciones por namespace.
 - Añadir tests E2E de flujo Guardada con Playwright.
+
+## 18. Despliegue con base de datos en servidor
+
+Objetivo:
+- Evitar base de datos local efimera al desplegar.
+
+Pasos recomendados:
+1. Provisiona una ruta persistente en el servidor (ej: `/var/lib/Pelis Xuntos/data.sqlite`).
+2. Define `DB_FILE_PATH` en el backend con esa ruta.
+3. Define `VITE_API_BASE_URL` en el frontend al dominio de la API.
+4. Verifica permisos de lectura/escritura del proceso Node sobre `DB_FILE_PATH`.
+5. Mantén backups del archivo SQLite y monitoriza crecimiento.
+
+Ejemplo variables en produccion:
+
+```bash
+# backend
+PORT=4000
+JWT_SECRET=<secreto-fuerte>
+DB_FILE_PATH=/var/lib/Pelis Xuntos/data.sqlite
+
+# frontend (build)
+VITE_API_BASE_URL=https://api.Pelis Xuntos.com
+```
 
 ## 16. Cambios recientes de arquitectura (busqueda)
 

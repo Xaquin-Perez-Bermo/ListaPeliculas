@@ -7,7 +7,8 @@ import { useState, useEffect } from 'react'
 export function useNavigation() {
   const [screen, setScreen] = useState(() => {
     // Cargar pantalla desde localStorage al inicializar
-    return localStorage.getItem('currentScreen') || 'buscar'
+    const savedScreen = localStorage.getItem('currentScreen') || 'buscar'
+    return savedScreen === 'list' ? 'lists' : savedScreen
   })
   const [feedback, setFeedback] = useState('')
 

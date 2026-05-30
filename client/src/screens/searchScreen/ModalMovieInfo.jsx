@@ -11,16 +11,16 @@ function renderMovieMeta(streamingInfoData, t) {
 	return (
 		<div className="movie-info-meta">
 			{streamingInfoData.runtime_minutes ? (
-				<span>⏱️ {streamingInfoData.runtime_minutes} min</span>
+				<span>{t('durationLabel')}: {streamingInfoData.runtime_minutes} min</span>
 			) : null}
 			{streamingInfoData.us_rating ? (
 				<span className="chip">{streamingInfoData.us_rating}</span>
 			) : null}
 			{streamingInfoData.user_rating ? (
-				<span>⭐ {streamingInfoData.user_rating}/10</span>
+				<span>{t('userRatingLabel')}: {streamingInfoData.user_rating}/10</span>
 			) : null}
 			{streamingInfoData.critic_score ? (
-				<span>🎯 {t('criticScore')}: {streamingInfoData.critic_score}/100</span>
+				<span>{t('criticScore')}: {streamingInfoData.critic_score}/100</span>
 			) : null}
 		</div>
 	)
@@ -82,7 +82,7 @@ function renderModalBody({
 		<>
 			{streamingInfoLoading ? (
 				<div style={{ textAlign: 'center', padding: '20px' }}>
-					<p className="muted">⏳ {t('streamingInfoLoading')}</p>
+					<p className="muted">{t('streamingInfoLoading')}</p>
 				</div>
 			) : null}
 			{streamingInfoError ? <p className="error">{streamingInfoError}</p> : null}

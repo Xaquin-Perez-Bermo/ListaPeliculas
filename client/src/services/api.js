@@ -3,6 +3,17 @@
  */
 
 let token = localStorage.getItem('token') || ''
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+
+function withBase(path) {
+  return `${API_BASE_URL}${path}`
+}
+
+function withOptionalListId(path, listId) {
+  if (!listId) return path
+  const query = new URLSearchParams({ listId: String(listId) })
+  return `${path}?${query.toString()}`
+}
 
 export function setToken(newToken) {
   token = newToken
@@ -49,41 +60,64 @@ export async function apiCall(path, options = {}) {
 // Auth endpoints
 export const authAPI = {
   login: (username, password) =>
-    apiCall('/api/auth/login', {
+    apiCall(withBase('/api/auth/login'), {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
 
   register: (username, password) =>
-    apiCall('/api/auth/register', {
+    apiCall(withBase('/api/auth/register'), {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
 
-  me: () => apiCall('/api/auth/me'),
+  me: () => apiCall(withBase('/api/auth/me')),
 }
 
 export const listsAPI = {
-  create: (name) =>
-    apiCall('/api/lists', {
+  create: (name, options = {}) =>
+    apiCall(withBase('/api/lists'), {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({
+        name,
+        description: options.description || '',
+        coverUrl: options.coverUrl || null,
+        visibility: options.visibility || (options.isPublic ? 'public' : 'personal'),
+        allowVeto: options.allowVeto === undefined ? true : Boolean(options.allowVeto),
+        allowMemberAdd: options.allowMemberAdd === undefined ? true : Boolean(options.allowMemberAdd),
+        allowMemberVeto: options.allowMemberVeto === undefined ? true : Boolean(options.allowMemberVeto),
+      }),
     }),
   delete: (listId) =>
-    apiCall(`/api/lists/${listId}`, {
+    apiCall(withBase(`/api/lists/${listId}`), {
       method: 'DELETE',
     }),
-  getAll: () => apiCall('/api/lists'),
-  getListById: (listId) => apiCall(`/api/lists/id/${listId}`),
-  getListByName: (listName) => apiCall(`/api/lists/name/${listName}`),
-  getMovies: (listId) => apiCall(`/api/lists/${listId}/movies`),
+  getAll: () => apiCall(withBase('/api/lists')),
+  getListById: (listId) => apiCall(withBase(`/api/lists/id/${listId}`)),
+  getListByName: (listName) => apiCall(withBase(`/api/lists/name/${listName}`)),
+  getMovies: (listId) => apiCall(withBase(`/api/lists/${listId}/movies`)),
+  searchPublic: (query = '') =>
+    apiCall(withBase(`/api/lists/public?q=${encodeURIComponent(query)}`)),
+  subscribe: (listId) =>
+    apiCall(withBase(`/api/lists/${listId}/subscribe`), {
+      method: 'POST',
+    }),
+  subscribeByInvite: (inviteCode) =>
+    apiCall(withBase(`/api/lists/subscribe/${encodeURIComponent(inviteCode)}`), {
+      method: 'POST',
+    }),
+  updateSettings: (listId, payload) =>
+    apiCall(withBase(`/api/lists/${listId}/settings`), {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
   addMovieToList: (listId, movieId) =>
-    apiCall(`/api/lists/${listId}/add-movie`, {
+    apiCall(withBase(`/api/lists/${listId}/add-movie`), {
       method: 'POST',
       body: JSON.stringify({ id: movieId }),
     }),
   removeMovieFromList: (listId, movieId) =>
-    apiCall(`/api/lists/${listId}/remove-movie`, {
+    apiCall(withBase(`/api/lists/${listId}/remove-movie`), {
       method: 'POST',
       body: JSON.stringify({ id: movieId }),
     }),
@@ -92,58 +126,58 @@ export const listsAPI = {
 // Movies endpoints
 export const moviesAPI = {
   getAll: (status = 'all', genre = '') =>
-    apiCall(`/api/movies?status=${status}&genre=${encodeURIComponent(genre)}`),
+    apiCall(withBase(`/api/movies?status=${status}&genre=${encodeURIComponent(genre)}`)),
 
-  getById: (id) => apiCall(`/api/movies/${id}`),
+  getById: (id) => apiCall(withBase(`/api/movies/${id}`)),
 
-  getByExternalId: (externalId) => apiCall(`/api/movies/external/${encodeURIComponent(externalId)}`),
+  getByExternalId: (externalId) => apiCall(withBase(`/api/movies/external/${encodeURIComponent(externalId)}`)),
 
   create: (movie) =>
-    apiCall('/api/movies', {
+    apiCall(withBase('/api/movies'), {
       method: 'POST',
       body: JSON.stringify(movie),
     }),
 
   remove: (id) =>
-    apiCall(`/api/movies/${id}`, {
+    apiCall(withBase(`/api/movies/${id}`), {
       method: 'DELETE',
     }),
 
-  veto: (id) =>
-    apiCall(`/api/movies/${id}/veto`, {
+  veto: (id, listId) =>
+    apiCall(withBase(withOptionalListId(`/api/movies/${id}/veto`, listId)), {
       method: 'POST',
     }),
 
-  unveto: (id) =>
-    apiCall(`/api/movies/${id}/veto`, {
+  unveto: (id, listId) =>
+    apiCall(withBase(withOptionalListId(`/api/movies/${id}/veto`, listId)), {
       method: 'DELETE',
     }),
 
-  getRandomPick: () => apiCall('/api/random-pick'),
+  getRandomPick: () => apiCall(withBase('/api/random-pick')),
 
   discover: (query) =>
-    apiCall(`/api/discover?q=${encodeURIComponent(query)}`),
+    apiCall(withBase(`/api/discover?q=${encodeURIComponent(query)}`)),
 
   getStreamingInfo: (title, year) => {
     const params = new URLSearchParams({ title })
     if (year) params.set('year', year)
-    return apiCall(`/api/streaming-info?${params}`)
+    return apiCall(withBase(`/api/streaming-info?${params}`))
   },
 
-  getRatings: (id) => apiCall(`/api/movies/${id}/ratings`),
+  getRatings: (id) => apiCall(withBase(`/api/movies/${id}/ratings`)),
 
   saveRating: (id, rating, watchedOn) =>
-    apiCall(`/api/movies/${id}/rating`, {
+    apiCall(withBase(`/api/movies/${id}/rating`), {
       method: 'POST',
       body: JSON.stringify({ rating, watchedOn }),
     }),
 
   clearRating: (id) =>
-    apiCall(`/api/movies/${id}/rating`, {
+    apiCall(withBase(`/api/movies/${id}/rating`), {
       method: 'DELETE',
     }),
   removeByExternal: (externalId) =>
-    apiCall(`/api/movies/external/${encodeURIComponent(externalId)}`, {
+    apiCall(withBase(`/api/movies/external/${encodeURIComponent(externalId)}`), {
       method: 'DELETE',
     }),
 }
@@ -151,21 +185,22 @@ export const moviesAPI = {
 
 // Genre veto endpoints
 export const genreVetoAPI = {
-  getAll: () => apiCall('/api/veto-genres'),
+  getAll: (listId) =>
+    apiCall(withBase(withOptionalListId('/api/veto-genres', listId))),
 
-  add: (genre) =>
-    apiCall('/api/veto-genres', {
+  add: (genre, listId) =>
+    apiCall(withBase('/api/veto-genres'), {
       method: 'POST',
-      body: JSON.stringify({ genre }),
+      body: JSON.stringify({ genre, listId }),
     }),
 
-  remove: (genre) =>
-    apiCall(`/api/veto-genres/${encodeURIComponent(genre)}`, {
+  remove: (genre, listId) =>
+    apiCall(withBase(withOptionalListId(`/api/veto-genres/${encodeURIComponent(genre)}`, listId)), {
       method: 'DELETE',
     }),
 }
 
 // Logs endpoints
 export const logsAPI = {
-  getAll: () => apiCall('/api/logs'),
+  getAll: () => apiCall(withBase('/api/logs')),
 }

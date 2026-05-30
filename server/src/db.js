@@ -1,7 +1,9 @@
 const path = require('node:path');
 const Database = require('better-sqlite3');
 
-const dbPath = path.join(__dirname, '..', 'data.sqlite');
+const dbPath = process.env.DB_FILE_PATH
+  ? path.resolve(process.env.DB_FILE_PATH)
+  : path.join(__dirname, '..', 'data.sqlite');
 const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
@@ -17,6 +19,14 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS lists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  cover_url TEXT,
+  is_public INTEGER NOT NULL DEFAULT 0,
+  allow_veto INTEGER NOT NULL DEFAULT 1,
+  visibility TEXT NOT NULL DEFAULT 'personal',
+  invite_code TEXT,
+  allow_member_add INTEGER NOT NULL DEFAULT 1,
+  allow_member_veto INTEGER NOT NULL DEFAULT 1,
   created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(name, created_by),
@@ -103,6 +113,35 @@ CREATE TABLE IF NOT EXISTS action_logs (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 `);
+
+// Lightweight migrations for existing SQLite files.
+function ensureColumn(tableName, columnName, ddl) {
+  const columns = all(`PRAGMA table_info(${tableName})`);
+  const exists = columns.some((column) => column.name === columnName);
+  if (!exists) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${ddl}`);
+  }
+}
+
+ensureColumn('lists', 'description', "description TEXT NOT NULL DEFAULT ''");
+ensureColumn('lists', 'cover_url', 'cover_url TEXT');
+ensureColumn('lists', 'is_public', 'is_public INTEGER NOT NULL DEFAULT 0');
+ensureColumn('lists', 'allow_veto', 'allow_veto INTEGER NOT NULL DEFAULT 1');
+ensureColumn('lists', 'visibility', "visibility TEXT NOT NULL DEFAULT 'personal'");
+ensureColumn('lists', 'invite_code', 'invite_code TEXT');
+ensureColumn('lists', 'allow_member_add', 'allow_member_add INTEGER NOT NULL DEFAULT 1');
+ensureColumn('lists', 'allow_member_veto', 'allow_member_veto INTEGER NOT NULL DEFAULT 1');
+
+run(
+  `
+  UPDATE lists
+  SET visibility = CASE
+    WHEN is_public = 1 THEN 'public'
+    ELSE 'personal'
+  END
+  WHERE visibility IS NULL OR visibility = ''
+  `
+);
 
 function run(query, params = []) {
   return db.prepare(query).run(params);

@@ -94,6 +94,7 @@ export function RandomRouletteModal({ movies, onClose, onOpenDetail, t }) {
         const result = getSelectedMovie(eligibleMovies, currentAngle)
         setPickedMovie(result)
         setSpinning(false)
+        onOpenDetail(result)
       }
     }
 
@@ -122,15 +123,6 @@ export function RandomRouletteModal({ movies, onClose, onOpenDetail, t }) {
             <button type="button" onClick={spin} disabled={spinning}>
               {spinning ? t('rouletteSpinning') : t('rouletteSpinButton')}
             </button>
-            {pickedMovie ? (
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => onOpenDetail(pickedMovie.id)}
-              >
-                {t('rouletteViewDetail', { title: pickedMovie.title })}
-              </button>
-            ) : null}
           </div>
           {pickedMovie ? (
             <p className="success roulette-result">

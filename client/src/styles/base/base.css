@@ -1,19 +1,19 @@
 :root {
-  --bg: #f4eee2;
-  --paper: #fffaf1;
-  --ink: #1f2f2d;
-  --muted: #5e6e69;
-  --line: #dccdb7;
-  --accent: #146c67;
-  --accent-2: #1976d2;
+  --bg: #eef2f9;
+  --paper: #fbfcff;
+  --ink: #1b1c1f;
+  --muted: #555d6b;
+  --line: #d3d9e4;
+  --accent: #2a5eb8;
+  --accent-2: #28589b;
   --ok: #2f7a28;
-  --danger: #9b2f24;
-  --border: #d8ccba;
-  --text-h: #0f5952;
-  --social-bg: #f5f5f5;
-  --shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
-  --accent-bg: rgba(20, 108, 103, 0.1);
-  --accent-border: rgba(20, 108, 103, 0.25);
+  --danger: #b3261e;
+  --border: #d9dfe9;
+  --text-h: #12326f;
+  --social-bg: #f4f6fb;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.1), 0 6px 14px rgba(16, 24, 40, 0.08);
+  --accent-bg: rgba(42, 94, 184, 0.1);
+  --accent-border: rgba(42, 94, 184, 0.2);
 }
 
 * {
@@ -25,8 +25,8 @@ body {
   font-family: 'Manrope', sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 10% 10%, #f7d8a7 0%, transparent 31%),
-    radial-gradient(circle at 95% 5%, #c8efe4 0%, transparent 28%),
+    radial-gradient(circle at 12% 6%, #dfe8ff 0%, transparent 32%),
+    radial-gradient(circle at 95% 10%, #f2e7ff 0%, transparent 30%),
     var(--bg);
 }
 

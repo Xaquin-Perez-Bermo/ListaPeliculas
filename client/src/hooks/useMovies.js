@@ -67,18 +67,18 @@ export function useMovies(token) {
       .catch(() => setDetailRatings([]))
   }, [selectedMovieId, token])
 
-  const vetoMovie = async (movieId) => {
+  const vetoMovie = async (movieId, listId) => {
     try {
-      await moviesAPI.veto(movieId)
+      await moviesAPI.veto(movieId, listId)
       await loadData()
     } catch (err) {
       setError(err.message)
     }
   }
 
-  const unvetoMovie = async (movieId) => {
+  const unvetoMovie = async (movieId, listId) => {
     try {
-      await moviesAPI.unveto(movieId)
+      await moviesAPI.unveto(movieId, listId)
       await loadData()
     } catch (err) {
       setError(err.message)
@@ -129,9 +129,9 @@ export function useMovies(token) {
     }
   }
 
-  const removeMovie = async (movie) => {
+  const addGenreVeto = async (genre, listId) => {
     try {
-      await moviesAPI.remove(movie.id)
+      await genreVetoAPI.add(genre, listId)
       await loadData()
       return true
     } catch (err) {
@@ -140,20 +140,9 @@ export function useMovies(token) {
     }
   }
 
-  const addGenreVeto = async (genre) => {
+  const removeGenreVeto = async (genre, listId) => {
     try {
-      await genreVetoAPI.add(genre)
-      await loadData()
-      return true
-    } catch (err) {
-      setError(err.message)
-      return false
-    }
-  }
-
-  const removeGenreVeto = async (genre) => {
-    try {
-      await genreVetoAPI.remove(genre)
+      await genreVetoAPI.remove(genre, listId)
       await loadData()
       return true
     } catch (err) {
