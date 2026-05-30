@@ -21,6 +21,9 @@ export function ListScreen({
   t,
   tGenre,
   onOpenDetail,
+  inviteCode,
+  visibility,
+  isOwner,
 }) {
   const [showRoulette, setShowRoulette] = useState(false)
   const [watchTargetMovie, setWatchTargetMovie] = useState(null)
@@ -50,6 +53,15 @@ export function ListScreen({
     )
   }
 
+  // Copiar enlace privado al portapapeles
+  const handleCopyInviteLink = () => {
+    if (!inviteCode) return
+    const url = `${globalThis.location.origin}/invite/${inviteCode}`
+    navigator.clipboard.writeText(url)
+      .then(() => alert(t('privateInviteLinkCopied') || '¡Enlace copiado!'))
+      .catch(() => alert('No se pudo copiar el enlace'))
+  }
+
   return (
     <section className="panel">
       <div className="list-breadcrumbs">
@@ -57,6 +69,14 @@ export function ListScreen({
         <span>/</span>
         <strong>{listName}</strong>
       </div>
+      {/* Botón para generar enlace privado */}
+      {visibility === 'private' && isOwner && inviteCode && (
+        <div style={{ margin: '12px 0' }}>
+          <button type="button" onClick={handleCopyInviteLink}>
+            {t('generateInviteLinkButton') || 'Generar enlace'}
+          </button>
+        </div>
+      )}
 
       <div className="panel-head">
         <h2>{listName}</h2>
@@ -196,9 +216,15 @@ ListScreen.propTypes = {
   t: PropTypes.func.isRequired,
   tGenre: PropTypes.func.isRequired,
   onOpenDetail: PropTypes.func.isRequired,
+  inviteCode: PropTypes.string,
+  visibility: PropTypes.string,
+  isOwner: PropTypes.bool,
 }
 
 ListScreen.defaultProps = {
   listName: '',
   canConfigureVeto: true,
+  inviteCode: '',
+  visibility: '',
+  isOwner: false,
 }

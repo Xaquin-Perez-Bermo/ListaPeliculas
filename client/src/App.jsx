@@ -146,6 +146,8 @@ function App() {
   const [selectedListId, setSelectedListId] = useState(null)
   const [selectedListAllowVeto, setSelectedListAllowVeto] = useState(true)
   const [selectedMovieList, setSelectedMovieList] = useState(null)
+  // Metadatos de la lista seleccionada
+  const [selectedListMeta, setSelectedListMeta] = useState({ inviteCode: '', visibility: '', isOwner: false })
 
   useEffect(() => {
     if (!selectedListId || !selectedListName) return
@@ -253,6 +255,12 @@ function App() {
           ? await listsAPI.getListById(listId).catch(() => null)
           : await listsAPI.getListByName(listName).catch(() => null)
         if (serverList?.id) {
+          // Set meta immediately so UI can show invite link even if movies fail to load
+          setSelectedListMeta({
+            inviteCode: serverList.inviteCode || '',
+            visibility: serverList.visibility || '',
+            isOwner: !!serverList.isOwner,
+          })
           const serverMovies = await listsAPI.getMovies(serverList.id).catch(() => null)
           if (Array.isArray(serverMovies)) {
             setSelectedMovieList(serverMovies)
@@ -268,6 +276,7 @@ function App() {
 
       // fallback to provided movies or empty
       setSelectedMovieList(movies || [])
+      setSelectedListMeta({ inviteCode: '', visibility: '', isOwner: false })
       setScreen('lists')
     })()
   }
@@ -481,6 +490,10 @@ function App() {
                   movies.setSelectedMovieId(resolvedMovieId)
                   setShowDetailModal(true)
                 }}
+                // Props nuevos para metadatos de lista
+                inviteCode={selectedListMeta.inviteCode}
+                visibility={selectedListMeta.visibility}
+                isOwner={selectedListMeta.isOwner}
               />
             ) : (
               <UserListsScreen
