@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 import { RandomRouletteModal } from '../RandomRouletteModal'
-import MovieCard from '../../components/movieList/MovieListCard'
 import MovieListCard from '../../components/movieList/MovieListCard'
+import MarkWatchedModal from '../../components/general/MarkWatchedModal'
 
 export function ListScreen({
   movies,
@@ -14,11 +15,15 @@ export function ListScreen({
   currentUsername,
   onToggleGenreVeto,
   onToggleMovieVeto,
+  canConfigureVeto,
+  onBackToLists,
+  onMarkWatched,
   t,
   tGenre,
   onOpenDetail,
 }) {
   const [showRoulette, setShowRoulette] = useState(false)
+  const [watchTargetMovie, setWatchTargetMovie] = useState(null)
   const [selectedGenres, setSelectedGenres] = useState(() => {
     // Cargar géneros seleccionados desde localStorage
     const saved = localStorage.getItem('selectedGenres')
@@ -47,20 +52,30 @@ export function ListScreen({
 
   return (
     <section className="panel">
+      <div className="list-breadcrumbs">
+        <button type="button" className="ghost" onClick={onBackToLists}>{t('lists')}</button>
+        <span>/</span>
+        <strong>{listName}</strong>
+      </div>
+
       <div className="panel-head">
         <h2>{listName}</h2>
         <div className="inline">
           <button onClick={() => setShowRoulette(true)}>{t('randomPickButton')}</button>
-          <button
-            className="ghost"
-            onClick={() => setShowVetoConfig((prev) => !prev)}
-          >
-            {showVetoConfig ? t('hideVetoConfig') : t('showVetoConfig')}
-          </button>
+          {canConfigureVeto ? (
+            <button
+              className="ghost"
+              onClick={() => setShowVetoConfig((prev) => !prev)}
+            >
+              {showVetoConfig ? t('hideVetoConfig') : t('showVetoConfig')}
+            </button>
+          ) : (
+            <p className="muted small">{t('listVetoDisabled')}</p>
+          )}
         </div>
       </div>
 
-      {showVetoConfig ? (
+      {showVetoConfig && canConfigureVeto ? (
         <div className="veto-config">
           <h3>{t('genreVetoTitle')}</h3>
           <p className="muted small">
@@ -128,10 +143,19 @@ export function ListScreen({
           movies={filteredMovies}
           t={t}
           onClose={() => setShowRoulette(false)}
-          onOpenDetail={(movieId) => {
-            onOpenDetail(movieId)
+          onOpenDetail={(movie) => {
+            onOpenDetail(movie)
             setShowRoulette(false)
           }}
+        />
+      ) : null}
+
+      {watchTargetMovie ? (
+        <MarkWatchedModal
+          movie={watchTargetMovie}
+          onClose={() => setWatchTargetMovie(null)}
+          onSave={onMarkWatched}
+          t={t}
         />
       ) : null}
 
@@ -146,9 +170,35 @@ export function ListScreen({
             tGenre={tGenre}
             onOpenDetail={onOpenDetail}
             onToggleMovieVeto={onToggleMovieVeto}
+            onMarkWatched={(movie) => setWatchTargetMovie(movie)}
+            canVeto={canConfigureVeto}
           />
         ))}
       </ul>
     </section>
   )
+}
+
+ListScreen.propTypes = {
+  movies: PropTypes.arrayOf(PropTypes.object).isRequired,
+  listName: PropTypes.string,
+  statusFilter: PropTypes.string.isRequired,
+  setStatusFilter: PropTypes.func.isRequired,
+  showVetoConfig: PropTypes.bool.isRequired,
+  setShowVetoConfig: PropTypes.func.isRequired,
+  groupedGenreVetoes: PropTypes.object.isRequired,
+  currentUsername: PropTypes.string.isRequired,
+  onToggleGenreVeto: PropTypes.func.isRequired,
+  onToggleMovieVeto: PropTypes.func.isRequired,
+  canConfigureVeto: PropTypes.bool,
+  onBackToLists: PropTypes.func.isRequired,
+  onMarkWatched: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired,
+  tGenre: PropTypes.func.isRequired,
+  onOpenDetail: PropTypes.func.isRequired,
+}
+
+ListScreen.defaultProps = {
+  listName: '',
+  canConfigureVeto: true,
 }

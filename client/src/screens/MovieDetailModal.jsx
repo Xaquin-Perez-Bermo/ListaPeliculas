@@ -1,27 +1,99 @@
-import ModalContainer from "../components/general/ModalContainer"
-import CloseModalButton from "../components/general/CloseModalButton"
+import { useEffect, useMemo, useState } from 'react'
+import PropTypes from 'prop-types'
+import ModalContainer from '../components/general/ModalContainer'
+import CloseModalButton from '../components/general/CloseModalButton'
+import { moviesAPI } from '../services/api'
+
+function renderSources(streamingInfoData, t) {
+  if (!streamingInfoData?.sources?.length) {
+    return <p className="muted">{t('notStreaming')}</p>
+  }
+
+  const uniqueSources = [...new Map(streamingInfoData.sources.map((source) => [source.name, source])).values()]
+
+  return (
+    <div className="source-chips">
+      {uniqueSources.map((source) => {
+        let suffix = ''
+        if (source.type === 'rent') suffix = ` (${t('sourceRent')})`
+        else if (source.type === 'buy') suffix = ` (${t('sourceBuy')})`
+
+        return (
+          <a
+            key={source.source_id}
+            href={source.web_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="source-chip"
+          >
+            {source.name}
+            {suffix}
+          </a>
+        )
+      })}
+    </div>
+  )
+}
 
 /**
  * MovieDetailModal - Modal para mostrar detalles de película
  */
 export function MovieDetailModal({
   selectedMovie,
-  detailRatings,
-  ratingState,
-  onRatingChange,
-  onSaveRating,
-  onClearWatched,
   onClose,
   t,
   tGenre,
 }) {
+  const [streamingInfoData, setStreamingInfoData] = useState(null)
+  const [streamingInfoLoading, setStreamingInfoLoading] = useState(false)
+  const [streamingInfoError, setStreamingInfoError] = useState('')
+
+  useEffect(() => {
+    if (!selectedMovie?.title) return
+
+    let isMounted = true
+
+    const loadStreamingInfo = async () => {
+      setStreamingInfoLoading(true)
+      setStreamingInfoError('')
+
+      try {
+        const data = await moviesAPI.getStreamingInfo(selectedMovie.title, selectedMovie.year)
+        if (!isMounted) return
+        setStreamingInfoData(data)
+      } catch (error) {
+        if (!isMounted) return
+        setStreamingInfoData(null)
+        setStreamingInfoError(error.message || t('notStreaming'))
+      } finally {
+        if (isMounted) {
+          setStreamingInfoLoading(false)
+        }
+      }
+    }
+
+    loadStreamingInfo()
+
+    return () => {
+      isMounted = false
+    }
+  }, [selectedMovie, t])
+
+  const displayedGenres = useMemo(() => {
+    if (selectedMovie?.genres?.length) return selectedMovie.genres
+    return streamingInfoData?.genre_names || []
+  }, [selectedMovie, streamingInfoData])
+
+  const posterUrl = selectedMovie?.posterUrl || streamingInfoData?.poster || ''
+  const synopsis = selectedMovie?.overview || streamingInfoData?.plot_overview || t('detailNoOverview')
+
   if (!selectedMovie) {
     return null
   }
 
   return (
     <ModalContainer onClose={onClose} t={t} className="modal large">
-      <div onClick={(e) => e.stopPropagation()}>
+      <div>
         <div className="panel-head">
           <h3>
             {selectedMovie.title} {selectedMovie.year ? `(${selectedMovie.year})` : ''}
@@ -30,70 +102,47 @@ export function MovieDetailModal({
         </div>
 
         <div className="chip-row">
-          {selectedMovie.genres.map((genre) => (
+          {displayedGenres.map((genre) => (
             <span key={`${selectedMovie.id}-detail-${genre}`} className="chip">
               {tGenre(genre)}
             </span>
           ))}
         </div>
 
-        <p className="muted">
-          {selectedMovie.overview || t('detailNoOverview')}
-        </p>
-
-        <div className="inline rating-row">
-          <span>{t('detailSeenOn')}</span>
-          <input
-            type="date"
-            value={ratingState.watchedOn}
-            onChange={(event) =>
-              onRatingChange({
-                watchedOn: event.target.value,
-              })
-            }
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt={selectedMovie.title}
+            className="movie-info-poster"
           />
-          <span>{t('detailRating')}</span>
-          <input
-            type="number"
-            min="0.5"
-            max="5"
-            step="0.5"
-            value={ratingState.rating}
-            onChange={(event) =>
-              onRatingChange({
-                rating: Number(event.target.value),
-              })
-            }
-          />
-          <button onClick={() => onSaveRating(selectedMovie.id)}>
-            {t('detailSaveRating')}
-          </button>
-          <button className="ghost" onClick={() => onClearWatched(selectedMovie.id)}>
-            {t('detailMarkUnwatched')}
-          </button>
-        </div>
+        ) : null}
 
-        <h4>{t('detailRatingsHistory')}</h4>
-        <ul className="result-list">
-          {detailRatings.length ? (
-            detailRatings.map((rating, index) => (
-              <li
-                key={`${rating.username}-${rating.updatedAt}-${index}`}
-                className="movie-card compact"
-              >
-                <div className="movie-main">
-                  <strong>{rating.username}</strong>
-                  <p>
-                    {rating.rating} / 5 | {t('detailSeenOn')} {rating.watchedOn}
-                  </p>
-                </div>
-              </li>
-            ))
-          ) : (
-            <li className="muted">{t('detailNoRatings')}</li>
-          )}
-        </ul>
+        <p className="movie-info-plot">{synopsis}</p>
+
+        <h4>{t('availableOn')}</h4>
+        {streamingInfoLoading ? <p className="muted">{t('streamingInfoLoading')}</p> : null}
+        {streamingInfoError ? <p className="error">{streamingInfoError}</p> : null}
+        {!streamingInfoLoading && !streamingInfoError ? renderSources(streamingInfoData, t) : null}
+
       </div>
     </ModalContainer>
   )
+}
+
+MovieDetailModal.propTypes = {
+  selectedMovie: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    title: PropTypes.string,
+    year: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    genres: PropTypes.arrayOf(PropTypes.string),
+    posterUrl: PropTypes.string,
+    overview: PropTypes.string,
+  }),
+  onClose: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired,
+  tGenre: PropTypes.func.isRequired,
+}
+
+MovieDetailModal.defaultProps = {
+  selectedMovie: null,
 }

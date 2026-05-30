@@ -15,6 +15,9 @@
 .like-selector-backdrop {
   position: absolute;
   inset: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   background: rgba(0, 0, 0, 0.45);
   display: grid;
   place-items: center;
@@ -66,22 +69,62 @@
   height: auto;
 }
 
+.roulette-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.roulette-result {
+  text-align: center;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.rating-stars-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.rating-stars {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.star-btn {
+  border: none;
+  background: transparent;
+  color: #b7bfd0;
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.star-btn.filled {
+  color: #f2b01e;
+}
+
+.star-btn:hover,
+.star-btn:focus-visible {
+  color: #f2b01e;
+  filter: none;
+  box-shadow: none;
+}
+
+.rating-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .modal.large {
   width: min(800px, calc(100vw - 28px));
-
-  .roulette-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 12px;
-  }
-
-  .roulette-result {
-    text-align: center;
-    margin-top: 8px;
-    font-weight: 600;
-  }
   max-height: calc(100vh - 28px);
   overflow-y: auto;
 }

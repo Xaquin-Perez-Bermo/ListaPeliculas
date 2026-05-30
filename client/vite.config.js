@@ -11,8 +11,8 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'icons.svg', 'pwa-192.png', 'pwa-512.png'],
       manifest: {
         id: '/',
-        name: 'CineJunta',
-        short_name: 'CineJunta',
+        name: 'Pelis Xuntos',
+        short_name: 'Pelis Xuntos',
         description: 'Lista de peliculas compartidas con busqueda y disponibilidad en streaming.',
         lang: 'es',
         start_url: '/',

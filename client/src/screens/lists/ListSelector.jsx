@@ -7,10 +7,8 @@ import { useState } from 'react'
 function ListSelector({
   localLists,
   selectedListNames,
-  isInSharedList,
   onToggleInList,
   onCreateList,
-  onAddToList,
   t,
 }) {
   const [newListName, setNewListName] = useState('')
@@ -48,7 +46,7 @@ function ListSelector({
                 title={listName}
                 type="button"
               >
-                {listName === 'favoritas' ? '⭐' : '📝'} {listName} ·{' '}
+                {listName} ·{' '}
                 {isSaved ? t('removeFromList') : t('addToList')}
               </button>
             </div>

@@ -3,10 +3,8 @@ const MovieCard = ({
   t,
   tGenre,
   // Props opcionales con valores por defecto
-  setLikeTargetMovie = () => { },
   fetchStreamingInfo = () => { },
   selectedSearchMovie = null,
-  hasSavedAnywhere = false,
   streamingInfoData = null,
   className = '',
   children,

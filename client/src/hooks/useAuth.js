@@ -2,12 +2,28 @@
  * useAuth Hook - Maneja la lógica de autenticación
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { authAPI, setToken, getToken } from '../services/api'
+
+function decodeUserFromToken(token) {
+  if (!token) return null
+
+  try {
+    const parts = String(token).split('.')
+    if (parts.length < 2) return null
+    const payload = JSON.parse(atob(parts[1]))
+    if (payload?.username && payload?.id) {
+      return { id: payload.id, username: payload.username }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
 
 export function useAuth() {
   const [authToken, setAuthToken] = useState(() => getToken() || '')
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(() => decodeUserFromToken(getToken() || ''))
   const [authMode, setAuthMode] = useState('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -25,7 +41,7 @@ export function useAuth() {
       setToken(data.token)
       setUsername('')
       setPassword('')
-      setUser(null) // Will be loaded by useMovies on token change
+      setUser(data.user || null)
     } catch (error) {
       setAuthError(error.message)
     }
@@ -38,6 +54,15 @@ export function useAuth() {
     setUsername('')
     setPassword('')
   }
+
+  useEffect(() => {
+    if (!authToken) {
+      setUser(null)
+      return
+    }
+
+    setUser((prevUser) => prevUser || decodeUserFromToken(authToken))
+  }, [authToken])
 
   return {
     token: authToken,

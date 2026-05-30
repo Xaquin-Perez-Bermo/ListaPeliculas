@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 import { useAuth, useMovies, useSearch, useLocalLists, useNavigation } from './hooks'
 import { listsAPI } from './services/api'
 import { AuthScreen } from './screens/AuthScreen'
@@ -6,11 +7,108 @@ import { SearchScreen } from './screens/searchScreen/SearchScreen'
 import { ListScreen } from './screens/lists/ListScreen'
 import { UserListsScreen } from './screens/lists/UserListsScreen'
 import { MovieDetailModal } from './screens/MovieDetailModal'
-import { WatchedMoviesScreen } from './screens/WatchedMoviesScreen'
 import { ActivityScreen } from './screens/ActivityScreen'
 import { getTodayDate, groupGenreVetoesByGenre } from './utils/movieUtils'
 import { useI18n } from './i18n'
 import './App.css'
+
+const LAST_SELECTED_LIST_KEY = 'Pelis Xuntos-last-selected-list'
+
+function AppUserControls({ auth, language, setLanguage, t, username }) {
+  if (!auth.isAuthenticated) return null
+
+  return (
+    <div className="topbar-user">
+      <label htmlFor="lang-switch" className="muted small">
+        {t('language')}
+      </label>
+      <select
+        id="lang-switch"
+        value={language}
+        onChange={(event) => setLanguage(event.target.value)}
+      >
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+      </select>
+      <span className="topbar-username">
+        {username ? t('helloUser', { username }) : t('helloGeneric')}
+      </span>
+      <button onClick={auth.logout}>{t('logout')}</button>
+    </div>
+  )
+}
+
+function AuthenticatedMain({
+  navItems,
+  screen,
+  onTabSelect,
+  feedback,
+  renderSearch,
+  renderLists,
+  renderActivity,
+  renderModal,
+}) {
+  return (
+    <>
+      <nav className="tabbar">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            className={screen === item.id ? 'tab active' : 'tab'}
+            onClick={() => onTabSelect(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      {feedback ? <p className="flash">{feedback}</p> : null}
+
+      <main className="content">
+        {screen === 'buscar' ? renderSearch() : null}
+        {screen === 'lists' ? renderLists() : null}
+        {screen === 'actividad' ? renderActivity() : null}
+      </main>
+
+      {renderModal()}
+    </>
+  )
+}
+
+AppUserControls.propTypes = {
+  auth: PropTypes.shape({
+    isAuthenticated: PropTypes.bool.isRequired,
+    logout: PropTypes.func.isRequired,
+  }).isRequired,
+  language: PropTypes.string.isRequired,
+  setLanguage: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired,
+  username: PropTypes.string,
+}
+
+AppUserControls.defaultProps = {
+  username: '',
+}
+
+AuthenticatedMain.propTypes = {
+  navItems: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+    }),
+  ).isRequired,
+  screen: PropTypes.string.isRequired,
+  onTabSelect: PropTypes.func.isRequired,
+  feedback: PropTypes.string,
+  renderSearch: PropTypes.func.isRequired,
+  renderLists: PropTypes.func.isRequired,
+  renderActivity: PropTypes.func.isRequired,
+  renderModal: PropTypes.func.isRequired,
+}
+
+AuthenticatedMain.defaultProps = {
+  feedback: '',
+}
 
 function App() {
   const { language, setLanguage, t, tGenre } = useI18n()
@@ -32,16 +130,35 @@ function App() {
     toggleMovieInLocalList,
     getListsForMovie,
     isMovieSaved,
+    serverLists,
+    publicLists,
+    publicListQuery,
+    setPublicListQuery,
+    subscribeToPublicList,
+    subscribeToPrivateList,
+    updateListSettings,
   } = useLocalLists()
 
   // Navigation state
   const { screen, setScreen, feedback, showFeedback } = useNavigation()
 
-  // Rating inputs for the detail screen
-  const [ratingInputs, setRatingInputs] = useState({})
-
   const [selectedListName, setSelectedListName] = useState(null)
+  const [selectedListId, setSelectedListId] = useState(null)
+  const [selectedListAllowVeto, setSelectedListAllowVeto] = useState(true)
   const [selectedMovieList, setSelectedMovieList] = useState(null)
+
+  useEffect(() => {
+    if (!selectedListId || !selectedListName) return
+
+    localStorage.setItem(
+      LAST_SELECTED_LIST_KEY,
+      JSON.stringify({
+        id: selectedListId,
+        name: selectedListName,
+        allowVeto: selectedListAllowVeto,
+      }),
+    )
+  }, [selectedListId, selectedListName, selectedListAllowVeto])
 
   // UI state for shared list screen
   const [showVetoConfig, setShowVetoConfig] = useState(() => {
@@ -51,6 +168,7 @@ function App() {
 
   // Modal state for movie details
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedDetailMovie, setSelectedDetailMovie] = useState(null)
 
   // Guardar showVetoConfig en localStorage cuando cambie
   useEffect(() => {
@@ -60,6 +178,11 @@ function App() {
 
   const sharedMovieIds = useMemo(
     () => new Set((movies.movies || []).map((movie) => movie.externalId)),
+    [movies.movies],
+  )
+
+  const watchedMovies = useMemo(
+    () => (movies.movies || []).filter((movie) => movie.myRating),
     [movies.movies],
   )
 
@@ -95,9 +218,10 @@ function App() {
 
   // Handlers for genre veto
   const handleToggleGenreVeto = async (genre, hasMyVeto) => {
+    const targetListId = selectedListId || undefined
     const success = hasMyVeto
-      ? await movies.removeGenreVeto(genre)
-      : await movies.addGenreVeto(genre)
+      ? await movies.removeGenreVeto(genre, targetListId)
+      : await movies.addGenreVeto(genre, targetListId)
 
     if (success) {
       showFeedback(
@@ -111,92 +235,164 @@ function App() {
   const handleToggleMovieVeto = async (movie) => {
     const hasMyVeto = (movie.vetoedBy || []).includes(movies.user?.username)
     if (hasMyVeto) {
-      await movies.unvetoMovie(movie.id)
+      await movies.unvetoMovie(movie.id, selectedListId || undefined)
       return
     }
 
-    await movies.vetoMovie(movie.id)
+    await movies.vetoMovie(movie.id, selectedListId || undefined)
   }
 
-  // Handlers for ratings
-  const getRatingState = (movie) => {
-    return (
-      ratingInputs[movie.id] || {
-        rating: movie.myRating || 3,
-        watchedOn: movie.myWatchedOn || getTodayDate(),
-      }
-    )
-  }
-
-  const handleRatingChange = (movieId, updates) => {
-    const current = getRatingState(movies.selectedMovie)
-    setRatingInputs((prev) => ({
-      ...prev,
-      [movieId]: {
-        ...current,
-        ...updates,
-      },
-    }))
-  }
-
-  const handleSaveRating = async (movieId) => {
-    const current = ratingInputs[movieId] || { rating: 3, watchedOn: getTodayDate() }
-    const success = await movies.saveRating(movieId, current.rating, current.watchedOn)
-    if (success) {
-      showFeedback(t('ratingSavedFeedback'))
-      setRatingInputs((prev) => {
-        const next = { ...prev }
-        delete next[movieId]
-        return next
-      })
-    }
-  }
-
-  const handleClearWatched = async (movieId) => {
-    const success = await movies.clearRating(movieId)
-    if (success) {
-      showFeedback(t('unwatchedFeedback'))
-      setRatingInputs((prev) => {
-        const next = { ...prev }
-        delete next[movieId]
-        return next
-      })
-    }
-  }
-
-  const handleOpenList = (listName, movies) => {
+  const handleOpenList = (listName, movies, listId = null, allowVeto = true) => {
     setSelectedListName(listName)
+    setSelectedListId(listId)
+    setSelectedListAllowVeto(allowVeto)
     // Try to load fresh list from server when authenticated
     ;(async () => {
       try {
-        const serverList = await listsAPI.getListByName(listName).catch(() => null)
-        if (serverList && serverList.id) {
+        const serverList = listId
+          ? await listsAPI.getListById(listId).catch(() => null)
+          : await listsAPI.getListByName(listName).catch(() => null)
+        if (serverList?.id) {
           const serverMovies = await listsAPI.getMovies(serverList.id).catch(() => null)
           if (Array.isArray(serverMovies)) {
             setSelectedMovieList(serverMovies)
-            setScreen('list')
+            setSelectedListId(serverList.id)
+            setSelectedListAllowVeto(Boolean(serverList.allowVeto))
+            setScreen('lists')
             return
           }
         }
-      } catch (_) {
-        // ignore
+      } catch (error) {
+        console.warn('No se pudo cargar la lista desde el servidor:', error.message)
       }
 
       // fallback to provided movies or empty
       setSelectedMovieList(movies || [])
-      setScreen('list')
+      setScreen('lists')
     })()
   }
 
-  // Memoized values
+  useEffect(() => {
+    const saved = localStorage.getItem(LAST_SELECTED_LIST_KEY)
+    if (!saved) return
+
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.id && parsed?.name) {
+        setSelectedListId(parsed.id)
+        setSelectedListName(parsed.name)
+        setSelectedListAllowVeto(Boolean(parsed.allowVeto))
+      }
+    } catch {
+      // ignore invalid payload
+    }
+  }, [])
+
+  const handleSubscribeToList = async (list) => {
+    const ok = await subscribeToPublicList(list.id)
+    if (ok) {
+      showFeedback(t('subscribedListFeedback', { listName: list.name }))
+    }
+  }
+
+  const handleSubscribeByInvite = async (rawInviteCode) => {
+    const raw = String(rawInviteCode || '').trim()
+    if (!raw) {
+      showFeedback(t('invalidInviteCode'))
+      return false
+    }
+
+    let inviteCode = raw
+
+    try {
+      if (raw.includes('://')) {
+        const parsed = new URL(raw)
+        const fromQuery = parsed.searchParams.get('invite')
+        if (fromQuery) {
+          inviteCode = fromQuery
+        } else {
+          const parts = parsed.pathname.split('/').filter(Boolean)
+          inviteCode = parts.at(-1) || raw
+        }
+      }
+    } catch {
+      // raw value is already treated as invite code
+    }
+
+    const ok = await subscribeToPrivateList(inviteCode)
+    if (ok) {
+      showFeedback(t('subscribedByInviteFeedback'))
+      return true
+    }
+
+    showFeedback(t('invalidInviteCode'))
+    return false
+  }
+
+  const handleMarkMovieWatched = async (movieId, rating) => {
+    const safeRating = Math.max(0.5, Math.min(5, Number(rating) || 3))
+    const watchedOn = getTodayDate()
+    const ok = await movies.saveRating(movieId, safeRating, watchedOn)
+
+    if (ok) {
+      showFeedback(t('ratingSavedFeedback'))
+      return true
+    }
+
+    showFeedback(t('ratingSaveError'))
+    return false
+  }
+
+  const handleOpenWatchedList = () => {
+    setSelectedListName(t('watchedMoviesTitle'))
+    setSelectedListId(null)
+    setSelectedListAllowVeto(false)
+    setSelectedMovieList(watchedMovies)
+    setScreen('lists')
+  }
+
+  const handleBackToListsHub = () => {
+    setSelectedListName(null)
+    setSelectedListId(null)
+    setSelectedMovieList(null)
+    setSelectedListAllowVeto(true)
+  }
+
+  const handleTabSelect = (nextScreen) => {
+    // If the user is already in Lists, clicking the same tab acts as "back to lists hub".
+    // If coming from another tab, preserve the last selected list detail.
+    if (nextScreen === 'lists' && screen === 'lists') {
+      handleBackToListsHub()
+    }
+
+    setScreen(nextScreen)
+  }
+
+  const handleUpdateListSettings = async (listId, payload) => {
+    const ok = await updateListSettings(listId, payload)
+    if (ok) {
+      showFeedback(t('listSettingsSavedFeedback'))
+      return true
+    }
+
+    showFeedback(t('listSettingsSaveError'))
+    return false
+  }
+
   const groupedGenreVetoes = useMemo(
-    () => groupGenreVetoesByGenre(movies.genreVetoes),
-    [movies.genreVetoes],
+    () => {
+      if (selectedListId && Array.isArray(selectedMovieList)) {
+        const vetoRows = selectedMovieList.flatMap((movie) => movie.genreVetoedBy || [])
+        return groupGenreVetoesByGenre(vetoRows)
+      }
+
+      return groupGenreVetoesByGenre(movies.genreVetoes)
+    },
+    [movies.genreVetoes, selectedListId, selectedMovieList],
   )
 
   const navItems = [
     { id: 'buscar', label: t('tabSearch') },
-    { id: 'vistas', label: t('tabWatched') },
     { id: 'lists', label: t('lists') },
     { id: 'actividad', label: t('tabActivity') },
   ]
@@ -208,126 +404,112 @@ function App() {
           <h1>{t('appTitle')}</h1>
           <p className="muted">{t('appSubtitle')}</p>
         </div>
-
-        {movies.user ? (
-          <div className="topbar-user">
-            <label htmlFor="lang-switch" className="muted small">
-              {t('language')}
-            </label>
-            <select
-              id="lang-switch"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value)}
-            >
-              <option value="es">ES</option>
-              <option value="en">EN</option>
-            </select>
-            <span>{t('helloUser', { username: movies.user.username })}</span>
-            <button onClick={auth.logout}>{t('logout')}</button>
-          </div>
-        ) : null}
+        <AppUserControls
+          auth={auth}
+          language={language}
+          setLanguage={setLanguage}
+          t={t}
+          username={movies.user?.username || auth.user?.username || ''}
+        />
       </header>
 
       {auth.isAuthenticated ? (
-        <>
-          <nav className="tabbar">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                className={screen === item.id ? 'tab active' : 'tab'}
-                onClick={() => setScreen(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          {feedback ? <p className="flash">{feedback}</p> : null}
-
-          <main className="content">
-            {screen === 'buscar' ? (
-              <SearchScreen
-                search={search}
-                lists={{
-                  localLists,
-                  getListsForMovie,
-                  isMovieSaved,
-                  isInSharedList: (externalId) => sharedMovieIds.has(externalId),
-                }}
-                listActions={{
-                  onToggleInLocalList: handleToggleInLocalList,
-                  onCreateList: createList,
-                  onDeleteList: deleteList,
-                  onAddToList: handleAddToSharedList,
-                }}
-                i18n={{ t, tGenre }}
-              />
-            ) : null}
-
-            {screen === 'list' ? (
+        <AuthenticatedMain
+          navItems={navItems}
+          screen={screen}
+          onTabSelect={handleTabSelect}
+          feedback={feedback}
+          renderSearch={() => (
+            <SearchScreen
+              search={search}
+              lists={{
+                localLists,
+                getListsForMovie,
+                isMovieSaved,
+                isInSharedList: (externalId) => sharedMovieIds.has(externalId),
+              }}
+              listActions={{
+                onToggleInLocalList: handleToggleInLocalList,
+                onCreateList: createList,
+                onDeleteList: deleteList,
+                onAddToList: handleAddToSharedList,
+              }}
+              listDiscovery={{
+                publicLists,
+                publicListQuery,
+                onPublicSearchChange: setPublicListQuery,
+                onSubscribeToList: handleSubscribeToList,
+                currentUsername: movies.user?.username || auth.user?.username || '',
+              }}
+              i18n={{ t, tGenre }}
+            />
+          )}
+          renderLists={() => (
+            selectedListName ? (
               <ListScreen
                 movies={selectedMovieList || []}
                 listName={selectedListName}
                 statusFilter={movies.statusFilter}
                 setStatusFilter={movies.setStatusFilter}
-                showVetoConfig={showVetoConfig}
+                showVetoConfig={selectedListAllowVeto ? showVetoConfig : false}
                 setShowVetoConfig={setShowVetoConfig}
                 groupedGenreVetoes={groupedGenreVetoes}
                 currentUsername={movies.user?.username || ''}
                 onToggleGenreVeto={handleToggleGenreVeto}
                 onToggleMovieVeto={handleToggleMovieVeto}
+                canConfigureVeto={selectedListAllowVeto}
+                onBackToLists={handleBackToListsHub}
+                onMarkWatched={handleMarkMovieWatched}
                 t={t}
                 tGenre={tGenre}
-                onOpenDetail={(movieId) => {
-                  movies.setSelectedMovieId(movieId)
+                onOpenDetail={(movieOrId) => {
+                  const movieFromParam =
+                    movieOrId && typeof movieOrId === 'object' ? movieOrId : null
+
+                  const resolvedMovie =
+                    movieFromParam ||
+                    (selectedMovieList || []).find((movie) => movie.id === movieOrId) ||
+                    null
+
+                  const resolvedMovieId = resolvedMovie?.id || movieOrId || null
+
+                  if (!resolvedMovieId) {
+                    return
+                  }
+
+                  setSelectedDetailMovie(resolvedMovie)
+                  movies.setSelectedMovieId(resolvedMovieId)
                   setShowDetailModal(true)
                 }}
               />
-            ) : null}
-
-            {screen === 'lists' ? (
+            ) : (
               <UserListsScreen
                 localLists={localLists}
+                serverLists={serverLists}
+                onOpenWatchedList={handleOpenWatchedList}
+                watchedMoviesCount={watchedMovies.length}
+                onUpdateListSettings={handleUpdateListSettings}
                 onCreateList={createList}
                 onDeleteList={deleteList}
                 onOpenList={handleOpenList}
+                onSubscribeByInvite={handleSubscribeByInvite}
                 t={t}
               />
-            ) : null}
-
-            {screen === 'vistas' ? (
-              <WatchedMoviesScreen
-                movies={movies.movies}
-                currentUsername={movies.user?.username || ''}
-                t={t}
-                onOpenDetail={(movieId) => {
-                  movies.setSelectedMovieId(movieId)
-                  setShowDetailModal(true)
-                }}
-                tGenre={tGenre}
-              />
-            ) : null}
-
-            {screen === 'actividad' ? <ActivityScreen logs={movies.logs} t={t} /> : null}
-          </main>
-
-          {showDetailModal ? (
+            )
+          )}
+          renderActivity={() => <ActivityScreen logs={movies.logs} t={t} />}
+          renderModal={() => (showDetailModal ? (
             <MovieDetailModal
-              selectedMovie={movies.selectedMovie}
-              detailRatings={movies.detailRatings}
-              ratingState={getRatingState(movies.selectedMovie || {})}
-              onRatingChange={(updates) =>
-                handleRatingChange(movies.selectedMovieId, updates)
-              }
-              onSaveRating={handleSaveRating}
-              onClearWatched={handleClearWatched}
-              onClose={() => setShowDetailModal(false)}
+              selectedMovie={movies.selectedMovie || selectedDetailMovie}
+              onClose={() => {
+                setShowDetailModal(false)
+                setSelectedDetailMovie(null)
+              }}
               t={t}
               tGenre={tGenre}
             />
-          ) : null}
-
-        </>
+          ) : null)}
+        />
       ) : (
         <AuthScreen
           authMode={auth.authMode}

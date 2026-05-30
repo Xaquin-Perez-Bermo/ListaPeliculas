@@ -1,7 +1,9 @@
 /**
  * WatchedMoviesScreen - Pantalla de películas vistas
  */
+import PropTypes from 'prop-types'
 import MovieCard from '../components/movieList/MovieListCard'
+import { WatchedGenresTimelineChart } from '../components/general/WatchedGenresTimelineChart'
 
 export function WatchedMoviesScreen({
   movies,
@@ -19,6 +21,8 @@ export function WatchedMoviesScreen({
         <h2>{t('watchedMoviesTitle')}</h2>
         <p className="muted">{t('watchedMoviesSubtitle', { count: watchedMovies.length })}</p>
       </div>
+
+      <WatchedGenresTimelineChart watchedMovies={watchedMovies} t={t} tGenre={tGenre} />
 
       <ul className="result-list">
         {watchedMovies.length ? (
@@ -39,4 +43,12 @@ export function WatchedMoviesScreen({
       </ul>
     </section>
   )
+}
+
+WatchedMoviesScreen.propTypes = {
+  movies: PropTypes.arrayOf(PropTypes.object).isRequired,
+  currentUsername: PropTypes.string.isRequired,
+  t: PropTypes.func.isRequired,
+  tGenre: PropTypes.func.isRequired,
+  onOpenDetail: PropTypes.func.isRequired,
 }
