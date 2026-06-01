@@ -1,14 +1,184 @@
 const path = require('node:path');
-const Database = require('better-sqlite3');
+const fs = require('node:fs');
+const initSqlJs = require('sql.js');
 
 const dbPath = process.env.DB_FILE_PATH
   ? path.resolve(process.env.DB_FILE_PATH)
   : path.join(__dirname, '..', 'data.sqlite');
-const db = new Database(dbPath);
 
-db.pragma('journal_mode = WAL');
+let sql = null;
+let sqlDb = null;
+let transactionDepth = 0;
+let pendingPersist = false;
 
-db.exec(`
+const db = {
+  exec(query) {
+    ensureReady();
+    sqlDb.exec(query);
+    schedulePersist();
+  },
+  transaction(callback) {
+    return (...args) => {
+      ensureReady();
+      beginTransaction();
+
+      try {
+        const result = callback(...args);
+        commitTransaction();
+        return result;
+      } catch (error) {
+        rollbackTransaction();
+        throw error;
+      }
+    };
+  },
+};
+
+async function initDb() {
+  if (sqlDb) {
+    return db;
+  }
+
+  sql = await initSqlJs({
+    locateFile(file) {
+      return path.join(path.dirname(require.resolve('sql.js/dist/sql-wasm.js')), file);
+    },
+  });
+
+  const fileBuffer = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
+  sqlDb = fileBuffer ? new sql.Database(fileBuffer) : new sql.Database();
+
+  sqlDb.exec('PRAGMA foreign_keys = ON;');
+
+  initializeSchema();
+
+  return db;
+}
+
+function ensureReady() {
+  if (!sqlDb) {
+    throw new Error('Database not initialized. Call initDb() before using db accessors.');
+  }
+}
+
+function persistDb() {
+  ensureReady();
+  fs.writeFileSync(dbPath, Buffer.from(sqlDb.export()));
+}
+
+function schedulePersist() {
+  if (transactionDepth > 0) {
+    pendingPersist = true;
+    return;
+  }
+
+  persistDb();
+}
+
+function beginTransaction() {
+  transactionDepth += 1;
+  executeRun('BEGIN');
+}
+
+function commitTransaction() {
+  executeRun('COMMIT');
+  transactionDepth = Math.max(0, transactionDepth - 1);
+
+  if (transactionDepth === 0 && pendingPersist) {
+    pendingPersist = false;
+    persistDb();
+  }
+}
+
+function rollbackTransaction() {
+  try {
+    executeRun('ROLLBACK');
+  } finally {
+    transactionDepth = Math.max(0, transactionDepth - 1);
+    if (transactionDepth === 0) {
+      pendingPersist = false;
+    }
+  }
+}
+
+function executeRun(query, params = []) {
+  ensureReady();
+  const statement = sqlDb.prepare(query);
+
+  try {
+    if (params.length) {
+      statement.bind(params);
+    }
+
+    while (statement.step()) {
+      // Consume statement rows for commands that may return metadata.
+    }
+
+    return {
+      changes: sqlDb.getRowsModified(),
+      lastInsertRowid: getLastInsertRowid(),
+    };
+  } finally {
+    statement.free();
+  }
+}
+
+function getLastInsertRowid() {
+  const statement = sqlDb.prepare(`SELECT last_insert_rowid() AS id`);
+
+  try {
+    if (!statement.step()) {
+      return 0;
+    }
+
+    const row = statement.getAsObject();
+    return Number(row.id || 0);
+  } finally {
+    statement.free();
+  }
+}
+
+function executeGet(query, params = []) {
+  ensureReady();
+  const statement = sqlDb.prepare(query);
+
+  try {
+    if (params.length) {
+      statement.bind(params);
+    }
+
+    if (!statement.step()) {
+      return undefined;
+    }
+
+    return statement.getAsObject();
+  } finally {
+    statement.free();
+  }
+}
+
+function executeAll(query, params = []) {
+  ensureReady();
+  const statement = sqlDb.prepare(query);
+
+  try {
+    if (params.length) {
+      statement.bind(params);
+    }
+
+    const rows = [];
+    while (statement.step()) {
+      rows.push(statement.getAsObject());
+    }
+
+    return rows;
+  } finally {
+    statement.free();
+  }
+}
+
+function initializeSchema() {
+  db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
@@ -114,6 +284,28 @@ CREATE TABLE IF NOT EXISTS action_logs (
 );
 `);
 
+  // Lightweight migrations for existing SQLite files.
+  ensureColumn('lists', 'description', "description TEXT NOT NULL DEFAULT ''");
+  ensureColumn('lists', 'cover_url', 'cover_url TEXT');
+  ensureColumn('lists', 'is_public', 'is_public INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('lists', 'allow_veto', 'allow_veto INTEGER NOT NULL DEFAULT 1');
+  ensureColumn('lists', 'visibility', "visibility TEXT NOT NULL DEFAULT 'personal'");
+  ensureColumn('lists', 'invite_code', 'invite_code TEXT');
+  ensureColumn('lists', 'allow_member_add', 'allow_member_add INTEGER NOT NULL DEFAULT 1');
+  ensureColumn('lists', 'allow_member_veto', 'allow_member_veto INTEGER NOT NULL DEFAULT 1');
+
+  run(
+    `
+    UPDATE lists
+    SET visibility = CASE
+      WHEN is_public = 1 THEN 'public'
+      ELSE 'personal'
+    END
+    WHERE visibility IS NULL OR visibility = ''
+    `
+  );
+}
+
 // Lightweight migrations for existing SQLite files.
 function ensureColumn(tableName, columnName, ddl) {
   const columns = all(`PRAGMA table_info(${tableName})`);
@@ -123,36 +315,18 @@ function ensureColumn(tableName, columnName, ddl) {
   }
 }
 
-ensureColumn('lists', 'description', "description TEXT NOT NULL DEFAULT ''");
-ensureColumn('lists', 'cover_url', 'cover_url TEXT');
-ensureColumn('lists', 'is_public', 'is_public INTEGER NOT NULL DEFAULT 0');
-ensureColumn('lists', 'allow_veto', 'allow_veto INTEGER NOT NULL DEFAULT 1');
-ensureColumn('lists', 'visibility', "visibility TEXT NOT NULL DEFAULT 'personal'");
-ensureColumn('lists', 'invite_code', 'invite_code TEXT');
-ensureColumn('lists', 'allow_member_add', 'allow_member_add INTEGER NOT NULL DEFAULT 1');
-ensureColumn('lists', 'allow_member_veto', 'allow_member_veto INTEGER NOT NULL DEFAULT 1');
-
-run(
-  `
-  UPDATE lists
-  SET visibility = CASE
-    WHEN is_public = 1 THEN 'public'
-    ELSE 'personal'
-  END
-  WHERE visibility IS NULL OR visibility = ''
-  `
-);
-
 function run(query, params = []) {
-  return db.prepare(query).run(params);
+  const result = executeRun(query, params);
+  schedulePersist();
+  return result;
 }
 
 function get(query, params = []) {
-  return db.prepare(query).get(params);
+  return executeGet(query, params);
 }
 
 function all(query, params = []) {
-  return db.prepare(query).all(params);
+  return executeAll(query, params);
 }
 
 function logAction(action, payload = {}, userId = null) {
@@ -164,6 +338,7 @@ function logAction(action, payload = {}, userId = null) {
 
 module.exports = {
   db,
+  initDb,
   run,
   get,
   all,
