@@ -6,7 +6,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const bcrypt = require('bcryptjs');
 const crypto = require('node:crypto');
-const { db, all, get, run, logAction } = require('./db');
+const { db, all, get, run, logAction, initDb } = require('./db');
 const { searchExternalMovies } = require('./movieSearch');
 const { getStreamingInfo } = require('./streamingProvider');
 const { signToken, requireAuth } = require('./auth');
@@ -1255,14 +1255,19 @@ app.use('/', (req, res, next) => {
   res.sendFile(path.join(__dirname, '../../public/index.html'));
 });
 
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`API escuchando en http://localhost:${port}`);
-});
+async function startServer() {
+  try {
+    await initDb();
+    getGlobalListId();
 
-// Ensure there is a default public list named 'global'
-try {
-  getGlobalListId();
-} catch (err) {
-  console.error('Error inicializando lista global:', err.message);
+    app.listen(port, () => {
+      // eslint-disable-next-line no-console
+      console.log(`API escuchando en http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error('Error inicializando servidor:', err.message);
+    process.exit(1);
+  }
 }
+
+startServer();
