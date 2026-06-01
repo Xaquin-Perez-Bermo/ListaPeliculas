@@ -1,5 +1,6 @@
 require('dotenv').config({ path: require('node:path').join(__dirname, '..', '.env') });
 
+const path = require('node:path');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -36,6 +37,14 @@ const corsOptions = allowedOrigins.length
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Después de app.use(morgan('dev'));
+app.use(express.static(path.join(__dirname, '../../public')));
+
+// Para que las rutas del cliente (React) funcionen, agregar fallback:
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../public/index.html'));
+});
 
 function normalizeGenres(genres) {
   if (!Array.isArray(genres)) {
