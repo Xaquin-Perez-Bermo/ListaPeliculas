@@ -41,10 +41,6 @@ app.use(morgan('dev'));
 // Después de app.use(morgan('dev'));
 app.use(express.static(path.join(__dirname, '../../public')));
 
-// Para que las rutas del cliente (React) funcionen, agregar fallback:
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../public/index.html'));
-});
 
 function normalizeGenres(genres) {
   if (!Array.isArray(genres)) {
@@ -1248,6 +1244,15 @@ app.get('/api/logs', requireAuth, (_req, res) => {
       payload: r.payload ? JSON.parse(r.payload) : null,
     }))
   );
+});
+
+app.use('/', (req, res, next) => {
+  // Skip si es una ruta API
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  // Servir index.html como fallback para React
+  res.sendFile(path.join(__dirname, '../../public/index.html'));
 });
 
 app.listen(port, () => {
