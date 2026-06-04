@@ -40,6 +40,7 @@ function renderSources(streamingInfoData, t) {
  */
 export function MovieDetailModal({
   selectedMovie,
+  detailRatings,
   onClose,
   t,
   tGenre,
@@ -124,6 +125,34 @@ export function MovieDetailModal({
         {streamingInfoError ? <p className="error">{streamingInfoError}</p> : null}
         {!streamingInfoLoading && !streamingInfoError ? renderSources(streamingInfoData, t) : null}
 
+        {detailRatings?.length > 0 && (
+          <>
+            <h4>{t('detailRatingsHistory')}</h4>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {detailRatings.map((rating, idx) => (
+                <li key={`${rating.username}-${rating.watchedOn}-${idx}`} style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ margin: 0 }}>
+                        <strong>{rating.username}</strong> • {rating.watchedOn}
+                      </p>
+                      <p style={{ margin: '0.25rem 0 0 0', color: '#f97316' }}>
+                        {'★'.repeat(Math.floor(rating.rating))}
+                        {Number(rating.rating) % 1 >= 0.5 ? '½' : ''}
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0b84f3' }}>
+                      {rating.rating}/5
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {detailRatings?.length === 0 && (
+          <p className="muted small">{t('detailNoRatings')}</p>
+        )}
       </div>
     </ModalContainer>
   )
@@ -138,6 +167,12 @@ MovieDetailModal.propTypes = {
     posterUrl: PropTypes.string,
     overview: PropTypes.string,
   }),
+  detailRatings: PropTypes.arrayOf(PropTypes.shape({
+    rating: PropTypes.number,
+    watchedOn: PropTypes.string,
+    username: PropTypes.string,
+    updatedAt: PropTypes.string,
+  })),
   onClose: PropTypes.func.isRequired,
   t: PropTypes.func.isRequired,
   tGenre: PropTypes.func.isRequired,
@@ -145,4 +180,5 @@ MovieDetailModal.propTypes = {
 
 MovieDetailModal.defaultProps = {
   selectedMovie: null,
+  detailRatings: [],
 }

@@ -423,10 +423,10 @@ function App() {
     return false
   }
 
-  const handleMarkMovieWatched = async (movieId, rating) => {
+  const handleMarkMovieWatched = async (movieId, rating, watchedOn) => {
     const safeRating = Math.max(0.5, Math.min(5, Number(rating) || 3))
-    const watchedOn = getTodayDate()
-    const ok = await movies.saveRating(movieId, safeRating, watchedOn)
+    const safeWatchedOn = String(watchedOn || '').trim() || getTodayDate()
+    const ok = await movies.saveRating(movieId, safeRating, safeWatchedOn)
 
     if (ok) {
       showFeedback(t('ratingSavedFeedback'))
@@ -602,6 +602,7 @@ function App() {
           renderModal={() => (showDetailModal ? (
             <MovieDetailModal
               selectedMovie={movies.selectedMovie || selectedDetailMovie}
+              detailRatings={movies.detailRatings}
               onClose={() => {
                 setShowDetailModal(false)
                 setSelectedDetailMovie(null)
