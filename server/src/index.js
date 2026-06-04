@@ -1252,7 +1252,12 @@ app.use('/', (req, res, next) => {
     return next();
   }
   // Servir index.html como fallback para React
-  res.sendFile(path.join(__dirname, '../../public/index.html'));
+  const indexPath = path.join(__dirname, '../../public/index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      res.status(404).json({ error: 'Frontend no encontrado. Ejecuta npm run build primero.' });
+    }
+  });
 });
 
 async function startServer() {
