@@ -71,8 +71,10 @@ export function useMovies(token) {
     try {
       await moviesAPI.veto(movieId, listId)
       await loadData()
+      return true
     } catch (err) {
       setError(err.message)
+      return false
     }
   }
 
@@ -80,8 +82,10 @@ export function useMovies(token) {
     try {
       await moviesAPI.unveto(movieId, listId)
       await loadData()
+      return true
     } catch (err) {
       setError(err.message)
+      return false
     }
   }
 

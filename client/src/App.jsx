@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { useAuth, useMovies, useSearch, useLocalLists, useNavigation } from './hooks'
 import { listsAPI } from './services/api'
@@ -134,6 +134,7 @@ function App() {
     publicLists,
     publicListQuery,
     setPublicListQuery,
+    listsLoading,
     subscribeToPublicList,
     subscribeToPrivateList,
     updateListSettings,
@@ -146,8 +147,51 @@ function App() {
   const [selectedListId, setSelectedListId] = useState(null)
   const [selectedListAllowVeto, setSelectedListAllowVeto] = useState(true)
   const [selectedMovieList, setSelectedMovieList] = useState(null)
+  const [isOpeningList, setIsOpeningList] = useState(false)
   // Metadatos de la lista seleccionada
   const [selectedListMeta, setSelectedListMeta] = useState({ inviteCode: '', visibility: '', isOwner: false })
+
+  const loadListFromServer = useCallback(async ({ listId, listName }) => {
+    const serverList = listId
+      ? await listsAPI.getListById(listId).catch(() => null)
+      : await listsAPI.getListByName(listName).catch(() => null)
+
+    if (!serverList?.id) {
+      return null
+    }
+
+    const serverMovies = await listsAPI.getMovies(serverList.id).catch(() => null)
+    if (!Array.isArray(serverMovies)) {
+      return null
+    }
+
+    return {
+      movies: serverMovies,
+      listId: serverList.id,
+      allowVeto: Boolean(serverList.allowVeto),
+      meta: {
+        inviteCode: serverList.inviteCode || '',
+        visibility: serverList.visibility || '',
+        isOwner: !!serverList.isOwner,
+      },
+    }
+  }, [])
+
+  const refreshSelectedList = useCallback(async () => {
+    if (!selectedListName) return
+
+    const payload = await loadListFromServer({
+      listId: selectedListId || null,
+      listName: selectedListName,
+    })
+
+    if (!payload) return
+
+    setSelectedMovieList(payload.movies)
+    setSelectedListId(payload.listId)
+    setSelectedListAllowVeto(payload.allowVeto)
+    setSelectedListMeta(payload.meta)
+  }, [loadListFromServer, selectedListId, selectedListName])
 
   useEffect(() => {
     if (!selectedListId || !selectedListName) return
@@ -226,6 +270,7 @@ function App() {
       : await movies.addGenreVeto(genre, targetListId)
 
     if (success) {
+      await refreshSelectedList()
       showFeedback(
         hasMyVeto
           ? t('vetoRemovedFeedback', { genre })
@@ -237,47 +282,47 @@ function App() {
   const handleToggleMovieVeto = async (movie) => {
     const hasMyVeto = (movie.vetoedBy || []).includes(movies.user?.username)
     if (hasMyVeto) {
-      await movies.unvetoMovie(movie.id, selectedListId || undefined)
+      const ok = await movies.unvetoMovie(movie.id, selectedListId || undefined)
+      if (ok) {
+        await refreshSelectedList()
+      }
       return
     }
 
-    await movies.vetoMovie(movie.id, selectedListId || undefined)
+    const ok = await movies.vetoMovie(movie.id, selectedListId || undefined)
+    if (ok) {
+      await refreshSelectedList()
+    }
   }
 
   const handleOpenList = (listName, movies, listId = null, allowVeto = true) => {
     setSelectedListName(listName)
     setSelectedListId(listId)
     setSelectedListAllowVeto(allowVeto)
+    setIsOpeningList(true)
+    setSelectedMovieList(null)
+    setScreen('lists')
+
     // Try to load fresh list from server when authenticated
     ;(async () => {
       try {
-        const serverList = listId
-          ? await listsAPI.getListById(listId).catch(() => null)
-          : await listsAPI.getListByName(listName).catch(() => null)
-        if (serverList?.id) {
-          // Set meta immediately so UI can show invite link even if movies fail to load
-          setSelectedListMeta({
-            inviteCode: serverList.inviteCode || '',
-            visibility: serverList.visibility || '',
-            isOwner: !!serverList.isOwner,
-          })
-          const serverMovies = await listsAPI.getMovies(serverList.id).catch(() => null)
-          if (Array.isArray(serverMovies)) {
-            setSelectedMovieList(serverMovies)
-            setSelectedListId(serverList.id)
-            setSelectedListAllowVeto(Boolean(serverList.allowVeto))
-            setScreen('lists')
-            return
-          }
+        const payload = await loadListFromServer({ listId, listName })
+        if (payload) {
+          setSelectedMovieList(payload.movies)
+          setSelectedListId(payload.listId)
+          setSelectedListAllowVeto(payload.allowVeto)
+          setSelectedListMeta(payload.meta)
+          return
         }
       } catch (error) {
         console.warn('No se pudo cargar la lista desde el servidor:', error.message)
+      } finally {
+        setIsOpeningList(false)
       }
 
       // fallback to provided movies or empty
       setSelectedMovieList(movies || [])
       setSelectedListMeta({ inviteCode: '', visibility: '', isOwner: false })
-      setScreen('lists')
     })()
   }
 
@@ -365,6 +410,7 @@ function App() {
     setSelectedListId(null)
     setSelectedMovieList(null)
     setSelectedListAllowVeto(true)
+    setIsOpeningList(false)
   }
 
   const handleTabSelect = (nextScreen) => {
@@ -457,6 +503,7 @@ function App() {
             selectedListName ? (
               <ListScreen
                 movies={selectedMovieList || []}
+                isLoading={isOpeningList}
                 listName={selectedListName}
                 statusFilter={movies.statusFilter}
                 setStatusFilter={movies.setStatusFilter}
@@ -499,6 +546,7 @@ function App() {
               <UserListsScreen
                 localLists={localLists}
                 serverLists={serverLists}
+                isLoading={listsLoading}
                 onOpenWatchedList={handleOpenWatchedList}
                 watchedMoviesCount={watchedMovies.length}
                 onUpdateListSettings={handleUpdateListSettings}

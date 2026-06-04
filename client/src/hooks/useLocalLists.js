@@ -5,7 +5,7 @@
  * y usa localStorage como caché/offline.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { loadLocalLists, saveLocalLists } from '../services/localStorage'
 import { getToken, moviesAPI, listsAPI } from '../services/api'
 import { mapMovieToLocal } from '../utils/movieUtils'
@@ -27,15 +27,33 @@ export function useLists() {
   const [publicLists, setPublicLists] = useState([])
   const [publicListQuery, setPublicListQuery] = useState('')
   const [listsLoading, setListsLoading] = useState(false)
+  const refreshRequestRef = useRef(0)
 
   // persistir cache local
   useEffect(() => {
     saveLocalLists(lists)
   }, [lists])
 
-  const refreshFromServer = async () => {
+  const refreshPublicLists = useCallback(async (queryOverride) => {
     const token = getToken()
     if (!token) return
+
+    const query = typeof queryOverride === 'string' ? queryOverride : publicListQuery
+
+    try {
+      const result = await listsAPI.searchPublic(query)
+      setPublicLists(Array.isArray(result) ? result : [])
+    } catch {
+      setPublicLists([])
+    }
+  }, [publicListQuery])
+
+  const refreshFromServer = useCallback(async () => {
+    const token = getToken()
+    if (!token) return
+
+    const requestId = refreshRequestRef.current + 1
+    refreshRequestRef.current = requestId
 
     setListsLoading(true)
     try {
@@ -43,13 +61,29 @@ export function useLists() {
       const fetchedServerLists = await listsAPI.getAll()
       const next = { ...localCache }
 
-      for (const listItem of fetchedServerLists) {
-        try {
-          const movies = await listsAPI.getMovies(listItem.id)
-          next[listItem.name] = Array.isArray(movies) ? movies.map(mapMovieToLocal) : []
-        } catch {
-          next[listItem.name] = next[listItem.name] || []
-        }
+      const moviesPerList = await Promise.all(
+        (fetchedServerLists || []).map(async (listItem) => {
+          try {
+            const movies = await listsAPI.getMovies(listItem.id)
+            return {
+              name: listItem.name,
+              movies: Array.isArray(movies) ? movies.map(mapMovieToLocal) : [],
+            }
+          } catch {
+            return {
+              name: listItem.name,
+              movies: next[listItem.name] || [],
+            }
+          }
+        })
+      )
+
+      moviesPerList.forEach((entry) => {
+        next[entry.name] = entry.movies
+      })
+
+      if (refreshRequestRef.current !== requestId) {
+        return
       }
 
       setServerLists(Array.isArray(fetchedServerLists) ? fetchedServerLists : [])
@@ -57,14 +91,16 @@ export function useLists() {
     } catch {
       // fallback: keep local cache
     } finally {
-      setListsLoading(false)
+      if (refreshRequestRef.current === requestId) {
+        setListsLoading(false)
+      }
     }
-  }
+  }, [])
 
   // cargar desde servidor al montar si hay token (reemplaza/mergea listas conocidas)
   useEffect(() => {
     refreshFromServer()
-  }, [])
+  }, [refreshFromServer])
 
   useEffect(() => {
     let cancelled = false
@@ -76,15 +112,9 @@ export function useLists() {
     }
 
     const loadPublicLists = async () => {
-      try {
-        const result = await listsAPI.searchPublic(publicListQuery)
-        if (!cancelled) {
-          setPublicLists(Array.isArray(result) ? result : [])
-        }
-      } catch {
-        if (!cancelled) {
-          setPublicLists([])
-        }
+      await refreshPublicLists(publicListQuery)
+      if (cancelled) {
+        return
       }
     }
 
@@ -93,7 +123,7 @@ export function useLists() {
     return () => {
       cancelled = true
     }
-  }, [publicListQuery])
+  }, [publicListQuery, refreshPublicLists])
 
   const addToList = (listName, movie) => {
     const mapped = mapMovieToLocal(movie)
@@ -231,6 +261,7 @@ export function useLists() {
 
       await listsAPI.subscribe(listId)
       await refreshFromServer()
+      await refreshPublicLists()
       return true
     } catch {
       return false
@@ -247,6 +278,7 @@ export function useLists() {
 
       await listsAPI.subscribeByInvite(cleanCode)
       await refreshFromServer()
+      await refreshPublicLists()
       return true
     } catch {
       return false

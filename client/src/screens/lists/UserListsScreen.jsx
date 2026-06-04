@@ -6,6 +6,7 @@ import PropTypes from 'prop-types'
 export function UserListsScreen({
   localLists,
   serverLists,
+  isLoading,
   onOpenWatchedList,
   watchedMoviesCount,
   onUpdateListSettings,
@@ -120,6 +121,7 @@ export function UserListsScreen({
   return (
     <section className="panel">
       <h2>{t('myLocalLists')}</h2>
+      {isLoading ? <p className="muted">{t('loadingLists')}</p> : null}
 
       <div className="list-grid">
         <article className="subpanel list-card watched-list-card">
@@ -385,6 +387,7 @@ export function UserListsScreen({
 UserListsScreen.propTypes = {
   localLists: PropTypes.object.isRequired,
   serverLists: PropTypes.arrayOf(PropTypes.object),
+  isLoading: PropTypes.bool,
   onOpenWatchedList: PropTypes.func,
   watchedMoviesCount: PropTypes.number,
   onUpdateListSettings: PropTypes.func,
@@ -397,6 +400,7 @@ UserListsScreen.propTypes = {
 
 UserListsScreen.defaultProps = {
   serverLists: [],
+  isLoading: false,
   onOpenWatchedList: () => {},
   watchedMoviesCount: 0,
   onUpdateListSettings: async () => false,

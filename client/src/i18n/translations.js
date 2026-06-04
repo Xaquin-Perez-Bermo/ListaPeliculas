@@ -17,6 +17,7 @@ export const translations = {
 
     list: 'Lista',
     lists: 'Listas',
+    loadingLists: 'Cargando listas...',
     moviesInList: 'Hay {{count}} peliculas en la lista',
     searchTitle: 'Buscar peliculas',
     externalCatalog: 'Catalogo externo',
@@ -214,6 +215,7 @@ export const translations = {
 
     list: 'List',
     lists: 'Lists',
+    loadingLists: 'Loading lists...',
     moviesInList: 'There are {{count}} movies in the list',
     searchTitle: 'Search movies',
     externalCatalog: 'External catalog',

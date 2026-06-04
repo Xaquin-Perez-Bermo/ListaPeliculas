@@ -6,6 +6,7 @@ import MarkWatchedModal from '../../components/general/MarkWatchedModal'
 
 export function ListScreen({
   movies,
+  isLoading,
   listName,
   statusFilter,
   setStatusFilter,
@@ -42,10 +43,16 @@ export function ListScreen({
     (a, b) => a.localeCompare(b),
   )
 
-  const filteredMovies = movies.filter((movie) => {
-    if (!selectedGenres.length) return true
-    return selectedGenres.some((genre) => movie.genres.includes(genre))
-  })
+  const filteredMovies = movies
+    .filter((movie) => {
+      if (statusFilter === 'active') return !movie.isVetoed
+      if (statusFilter === 'vetoed') return movie.isVetoed
+      return true
+    })
+    .filter((movie) => {
+      if (!selectedGenres.length) return true
+      return selectedGenres.some((genre) => movie.genres.includes(genre))
+    })
 
   const toggleGenreFilter = (genre) => {
     setSelectedGenres((prev) =>
@@ -158,6 +165,8 @@ export function ListScreen({
         </div>
       </div>
 
+      {isLoading ? <p className="muted">{t('loadingLists')}</p> : null}
+
       {showRoulette ? (
         <RandomRouletteModal
           movies={filteredMovies}
@@ -201,6 +210,7 @@ export function ListScreen({
 
 ListScreen.propTypes = {
   movies: PropTypes.arrayOf(PropTypes.object).isRequired,
+  isLoading: PropTypes.bool,
   listName: PropTypes.string,
   statusFilter: PropTypes.string.isRequired,
   setStatusFilter: PropTypes.func.isRequired,
@@ -223,6 +233,7 @@ ListScreen.propTypes = {
 
 ListScreen.defaultProps = {
   listName: '',
+  isLoading: false,
   canConfigureVeto: true,
   inviteCode: '',
   visibility: '',
