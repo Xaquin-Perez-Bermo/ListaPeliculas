@@ -14,6 +14,30 @@ import './App.css'
 
 const LAST_SELECTED_LIST_KEY = 'Pelis Xuntos-last-selected-list'
 
+function applyMovieVetoToList(movieList, movieId, hasMyVeto, username) {
+  return movieList.map((m) => {
+    if (m.id !== movieId) return m
+    const nextVetoedBy = hasMyVeto
+      ? (m.vetoedBy || []).filter((u) => u !== username)
+      : [...(m.vetoedBy || []), username]
+    const hasGenreVeto = (m.genreVetoedBy || []).length > 0
+    return { ...m, vetoedBy: nextVetoedBy, isVetoed: nextVetoedBy.length > 0 || hasGenreVeto }
+  })
+}
+
+function applyGenreVetoToList(movieList, genre, hasMyVeto, username) {
+  const genreLower = genre.toLowerCase()
+  return movieList.map((m) => {
+    const hasGenre = (m.genres || []).some((g) => g.toLowerCase() === genreLower)
+    if (!hasGenre) return m
+    const prev = m.genreVetoedBy || []
+    const next = hasMyVeto
+      ? prev.filter((v) => !(v.genre?.toLowerCase() === genreLower && v.username === username))
+      : [...prev, { genre, username }]
+    return { ...m, genreVetoedBy: next, isVetoed: (m.vetoedBy || []).length > 0 || next.length > 0 }
+  })
+}
+
 function AppUserControls({ auth, language, setLanguage, t, username }) {
   if (!auth.isAuthenticated) return null
 
@@ -193,6 +217,20 @@ function App() {
     setSelectedListMeta(payload.meta)
   }, [loadListFromServer, selectedListId, selectedListName])
 
+  // Reload selected list on page refresh (screen + listId restored from localStorage but movies are null)
+  useEffect(() => {
+    if (
+      screen === 'lists' &&
+      selectedListId &&
+      selectedListName &&
+      selectedMovieList === null &&
+      !isOpeningList
+    ) {
+      setIsOpeningList(true)
+      refreshSelectedList().finally(() => setIsOpeningList(false))
+    }
+  }, [screen, selectedListId, selectedListName, selectedMovieList, isOpeningList, refreshSelectedList])
+
   useEffect(() => {
     if (!selectedListId || !selectedListName) return
 
@@ -265,34 +303,36 @@ function App() {
   // Handlers for genre veto
   const handleToggleGenreVeto = async (genre, hasMyVeto) => {
     const targetListId = selectedListId || undefined
+    const username = movies.user?.username
+    if (username) setSelectedMovieList((prev) => prev ? applyGenreVetoToList(prev, genre, hasMyVeto, username) : prev)
+
     const success = hasMyVeto
       ? await movies.removeGenreVeto(genre, targetListId)
       : await movies.addGenreVeto(genre, targetListId)
 
     if (success) {
-      await refreshSelectedList()
       showFeedback(
         hasMyVeto
           ? t('vetoRemovedFeedback', { genre })
           : t('vetoAddedFeedback', { genre }),
       )
+      refreshSelectedList()
     }
   }
 
   const handleToggleMovieVeto = async (movie) => {
-    const hasMyVeto = (movie.vetoedBy || []).includes(movies.user?.username)
+    const username = movies.user?.username
+    const hasMyVeto = (movie.vetoedBy || []).includes(username)
+    if (username) setSelectedMovieList((prev) => prev ? applyMovieVetoToList(prev, movie.id, hasMyVeto, username) : prev)
+
     if (hasMyVeto) {
       const ok = await movies.unvetoMovie(movie.id, selectedListId || undefined)
-      if (ok) {
-        await refreshSelectedList()
-      }
+      if (ok) refreshSelectedList()
       return
     }
 
     const ok = await movies.vetoMovie(movie.id, selectedListId || undefined)
-    if (ok) {
-      await refreshSelectedList()
-    }
+    if (ok) refreshSelectedList()
   }
 
   const handleOpenList = (listName, movies, listId = null, allowVeto = true) => {
@@ -383,10 +423,10 @@ function App() {
     return false
   }
 
-  const handleMarkMovieWatched = async (movieId, rating) => {
+  const handleMarkMovieWatched = async (movieId, rating, watchedOn) => {
     const safeRating = Math.max(0.5, Math.min(5, Number(rating) || 3))
-    const watchedOn = getTodayDate()
-    const ok = await movies.saveRating(movieId, safeRating, watchedOn)
+    const safeWatchedOn = String(watchedOn || '').trim() || getTodayDate()
+    const ok = await movies.saveRating(movieId, safeRating, safeWatchedOn)
 
     if (ok) {
       showFeedback(t('ratingSavedFeedback'))
@@ -562,6 +602,7 @@ function App() {
           renderModal={() => (showDetailModal ? (
             <MovieDetailModal
               selectedMovie={movies.selectedMovie || selectedDetailMovie}
+              detailRatings={movies.detailRatings}
               onClose={() => {
                 setShowDetailModal(false)
                 setSelectedDetailMovie(null)
